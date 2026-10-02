@@ -5,6 +5,16 @@ offline-first PWA, live conditions and a public-data weather view. Fork it,
 build something on it, make it better — and when you ship it commercially,
 that is where the licence comes in.
 
+## See it running
+
+| Radio deck | Wrist radio |
+| --- | --- |
+| ![CB radio deck — channel 19, hold to talk](docs/screenshots/radio.png) | ![Wrist radio — one big key, tap to talk](docs/screenshots/wrist.png) |
+
+| Forecast map | Weather |
+| --- | --- |
+| ![Forecast map — tap to set location](docs/screenshots/map.png) | ![Weather — wave-synthesis outlook](docs/screenshots/weather.png) |
+
 ## What is in here
 
 - `src/routes/` — CB radio deck UI, watch faces, map, pricing page, store and
@@ -89,6 +99,20 @@ are building. Every request is reviewed by hand.
 
 The multi-carrier handset-to-handset daisy chain is **not** on this ladder.
 It is the top prize and ships only under a signed licence.
+
+## Good first contributions
+
+Pick one, open a PR, climb the ladder:
+
+1. **Channel presets** — the deck ships with 09/19 presets; make presets
+   user-editable and persisted (localStorage is fine).
+2. **Scanner lock indicator** — when the linear scan hears traffic, flash the
+   channel readout and chirp; the hook points are in `src/lib/cb-links.ts`.
+3. **Watch-face polish** — `src/routes/wcb.tsx` is one big tap target; make
+   the whole screen the key on viewports under 400px and keep it painted on
+   dim watch WebViews.
+
+Small, real, mergeable. One merged PR = E1.
 
 ## Come and get it
 
