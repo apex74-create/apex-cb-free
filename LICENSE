@@ -1,0 +1,35 @@
+Apex CB — community shell licence
+
+Copyright (c) 2026 Apex Air Solutions / TinyRadr (the "Owner")
+
+1. GRANT. You may use, copy, modify and redistribute this repository and its
+   derivative works for personal, educational and other non-commercial
+   purposes, provided this licence and the copyright notice stay attached.
+
+2. COMMERCIAL USE REQUIRES A LICENCE. Any commercial use — including hosting
+   the shell as a service, bundling it (whole or in part) into a paid
+   product, or reselling access to it — requires a written licence from the
+   Owner, which may include a revenue-share arrangement.
+
+3. THE PROTECTED MATH IS NOT INCLUDED. Nothing in this repository grants any
+   right to the Owner's proprietary engines, synthesis parameters, scoring
+   logic, operator scripts, licence keys, keystores or customer data. Those
+   remain the exclusive property of the Owner. Reverse-engineering the
+   compiled native build to extract them is prohibited.
+
+4. CONTRIBUTIONS. By submitting a pull request or other contribution, you
+   grant the Owner a perpetual, worldwide, royalty-free licence to use,
+   modify and distribute your contribution in both the open community tree
+   and the Owner's private tree.
+
+5. API ACCESS. Access to the Owner's proprietary engine APIs is granted
+   per contributor under separate metered terms and may be revoked at any
+   time.
+
+6. NO WARRANTY. The software is provided "as is", without warranty of any
+   kind. In no event shall the Owner be liable for any claim, damages or
+   other liability arising from use of the software.
+
+7. TRADEMARKS. "Apex", "Apex Signal", "Sovereign CB", "TinyRadr" and
+   associated marks are not licensed by this repository; renaming is required
+   for any redistribution that is not an unmodified personal fork.

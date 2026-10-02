@@ -1,0 +1,797 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system definition.
+ *
+ * The @theme inline block maps CSS custom properties to Tailwind utility
+ * classes (e.g. --color-primary -> bg-primary, text-primary).
+ *
+ * The :root and .dark blocks define the actual color values using oklch.
+ * All colors MUST use oklch format.
+ *
+ * To add a new semantic color:
+ * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ */
+
+@theme inline {
+  --font-mono: "Share Tech Mono", "Courier New", ui-monospace, monospace;
+  --font-sans: "Share Tech Mono", "Courier New", ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-signal: var(--signal);
+  --color-warn: var(--warn);
+  --color-alert: var(--alert);
+  --color-scan: var(--scan);
+  --color-surface: var(--surface);
+}
+
+
+:root {
+  --radius: 0.25rem;
+  /* True OLED black: the panel switches these pixels off entirely, which is
+     what makes the neon read as light on a watch or phone. */
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.95 0.02 160);
+  --surface: oklch(0.13 0.02 160);
+  --card: oklch(0.11 0.02 160);
+  --card-foreground: oklch(0.93 0.02 160);
+  --popover: oklch(0.11 0.02 160);
+  --popover-foreground: oklch(0.93 0.02 160);
+  --primary: oklch(0.9 0.3 145);
+  --primary-foreground: oklch(0.12 0.03 160);
+  --secondary: oklch(0.18 0.03 160);
+  --secondary-foreground: oklch(0.93 0.02 160);
+  --muted: oklch(0.18 0.03 160);
+  --muted-foreground: oklch(0.7 0.03 160);
+  --accent: oklch(0.2 0.05 160);
+  --accent-foreground: oklch(0.93 0.02 160);
+  --destructive: oklch(0.63 0.23 15);
+  --destructive-foreground: oklch(0.97 0.01 160);
+  --border: oklch(0.9 0.3 145 / 26%);
+  --input: oklch(0.9 0.3 145 / 28%);
+  --ring: oklch(0.9 0.3 145 / 65%);
+
+  /* neon accents */
+  --signal: oklch(0.9 0.3 145);
+  --warn: oklch(0.88 0.22 85);
+  --alert: oklch(0.72 0.29 20);
+  --scan: oklch(0.85 0.2 210);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-signal);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    /* No pinch-zoom, no root scaling. Scaling the whole document re-lays out
+       every frame on a watch WebView, which is what dropped the paint. */
+    touch-action: manipulation;
+    line-height: var(--watch-line, 1.25);
+  }
+
+}
+
+/* The index is a fixed, already-finished vector face. It does not use any
+   measured dimensions or post-paint responsive profile. */
+.watch-landing {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-background);
+  color: var(--color-signal);
+  touch-action: manipulation;
+}
+
+.watch-landing-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.watch-landing *,
+.watch-landing *::before,
+.watch-landing *::after {
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.watch-landing-header {
+  position: absolute;
+  z-index: 2;
+  top: 4%;
+  left: 5%;
+  right: 5%;
+  text-align: center;
+}
+
+.watch-landing-header h1 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.watch-landing-header p,
+.watch-landing-readout span {
+  margin: 3px 0 0;
+  color: var(--color-muted-foreground);
+  font-size: 8px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.watch-landing-readout {
+  position: absolute;
+  z-index: 2;
+  top: 43%;
+  left: 20%;
+  right: 20%;
+  text-align: center;
+}
+
+.watch-landing-readout strong,
+.watch-landing-readout span {
+  display: block;
+}
+
+.watch-landing-readout strong {
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.watch-landing-actions {
+  position: absolute;
+  z-index: 3;
+  left: 4%;
+  right: 4%;
+  bottom: 4%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.watch-landing-actions a,
+.watch-landing-actions button,
+.watch-landing-actions span {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-background);
+  color: var(--color-signal);
+  font: inherit;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-decoration: none;
+}
+
+
+@utility scan-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--signal) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--signal) 7%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Viewport height that legacy WebViews can actually resolve.
+   StyleGuard overwrites --app-h with a measured pixel value; the 100vh
+   default keeps SSR and modern browsers correct. */
+@utility h-app {
+  height: var(--app-h, 100vh);
+}
+
+@utility min-h-app {
+  min-height: var(--app-h, 100vh);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Splash + feature reel motion */
+.splash-ring {
+  animation: splash-ring 1.8s ease-out infinite;
+}
+
+@keyframes splash-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--signal) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+
+.reel-dash {
+  animation: reel-dash 1.2s linear infinite;
+}
+
+@keyframes reel-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.reel-pulse {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.reel-draw {
+  stroke-dasharray: 140;
+  animation: reel-draw 2.4s ease-in-out infinite;
+}
+
+@keyframes reel-draw {
+  0% {
+    stroke-dashoffset: 140;
+  }
+  60%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Gyro canvas path uses live motion on capable devices. The SVG fallback is
+   deliberately transform-free: old watch compositors can paint a promoted
+   SVG layer once and then black-screen the whole page. */
+.gyro-free {
+  transform-origin: 50% 50%;
+}
+
+.gyro-locked {
+  animation: none;
+  transform: rotate(0deg);
+  transform-origin: 50% 50%;
+  transition: transform 0.25s ease-out;
+}
+
+
+.gyro-flash {
+  animation: gyro-flash 0.6s ease-out 1;
+  transform-origin: 50% 50%;
+}
+
+@keyframes gyro-flash {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-ring,
+  .reel-dash,
+  .reel-pulse,
+  .reel-draw {
+    animation: none;
+  }
+}
+
+
+/* Leaflet dark tuning */
+.leaflet-container {
+  background: #05100b;
+  font-family: var(--font-mono);
+}
+.leaflet-control-attribution {
+  display: none;
+}
+/* Dark remains dark; satellite is slightly dimmed so OLED overlays stay legible. */
+.apex-map-dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.62) contrast(1.28) saturate(0.55);
+}
+.apex-map-sat .leaflet-tile-pane {
+  filter: brightness(0.72) contrast(1.18) saturate(0.82);
+}
+.apex-map-control {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ---- Watch face shape ------------------------------------------------
+ * Square faces (LOKMAT-style large square) render edge-to-edge.
+ * Round faces get a circular safe area so nothing clips at the bezel.
+ */
+:root {
+  --face-inset: 0px;
+  --face-round: 0;
+  --face-cols: 2;
+  /* watch settings overrides */
+  --watch-scale: 1;
+  --watch-line: 1.25;
+  /* measured at runtime; defaults keep SSR sane */
+  --face-auto: 1;
+  --ui-scale: 1;
+  --face-min: 400px;
+  --face-inset-eff: var(--face-inset-user, var(--face-inset));
+  --app-h: 100vh;
+}
+
+@media (shape: round) {
+  :root {
+    --face-inset: 9%;
+    --face-round: 1;
+    --face-cols: 1;
+  }
+}
+
+.face-round {
+  --face-inset: 9%;
+  --face-round: 1;
+  --face-cols: 1;
+}
+
+.face-square {
+  --face-inset: 0px;
+  --face-round: 0;
+  --face-cols: 2;
+}
+
+/* User inset (watch settings) wins over the shape default when set. */
+@utility face-pad {
+  padding-left: max(var(--face-inset-eff), 0.5rem);
+  padding-right: max(var(--face-inset-eff), 0.5rem);
+}
+
+@utility face-safe {
+  padding-left: max(var(--face-inset-eff), 0.5rem);
+  padding-right: max(var(--face-inset-eff), 0.5rem);
+  padding-top: calc(var(--face-inset-eff) * 0.55);
+  padding-bottom: calc(var(--face-inset-eff) * 0.55);
+}
+
+/* Circular bezel treatment, only when a round face is active */
+.face-round body,
+:root:has(.face-round) {
+  background: #000;
+}
+
+@utility face-mask {
+  &:where(.face-round *, [data-face="round"] *) {
+    border-radius: 50%;
+    overflow: hidden;
+  }
+}
+
+/* Gallery tile: block card on square faces, compact row on round faces */
+@utility face-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 4.25rem;
+  padding: 0.5rem;
+
+  :where(.face-round) & {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding: 0 0.6rem;
+  }
+}
+
+/* Form-factor specialisation: the watch stays edge-to-edge and dense, while
+   phone and tablet get a centred, roomier column of the same UI. */
+html[data-face-size="micro"] { --face-cols: 1; }
+html[data-face-size="watch"] { --face-cols: 2; }
+html[data-device="phone"] { --face-cols: 2; }
+html[data-device="tablet"], html[data-device="desktop"] { --face-cols: 3; }
+html[data-device="tablet"] .face-pad,
+html[data-device="desktop"] .face-pad {
+  padding-left: max(var(--face-inset, 0px), 1.25rem);
+  padding-right: max(var(--face-inset, 0px), 1.25rem);
+}
+
+/* The watch face stage stays square and centred on phone / tablet / desktop
+   so the gauge, gyro and stat tiles keep their designed proportions instead
+   of stretching down a tall viewport. */
+.face-stage { max-width: none; }
+html[data-device="phone"] .face-stage,
+html[data-device="tablet"] .face-stage,
+html[data-device="desktop"] .face-stage {
+  max-width: min(100%, var(--app-h, 100vh));
+}
+
+/*
+ * Legacy watch-browser fallback.
+ *
+ * The LOKMAT watch ships an old WebView that cannot parse oklch()/color-mix(),
+ * so every themed colour resolved to nothing and the console rendered as plain
+ * black-on-white text. These sRGB equivalents keep the terminal palette intact
+ * on those browsers and are ignored everywhere else.
+ */
+@supports not (color: oklch(0.5 0.1 160)) {
+  :root {
+    --background: #010804;
+    --foreground: #ddece3;
+    --surface: #03130b;
+    --card: #021109;
+    --card-foreground: #ddece3;
+    --popover: #021109;
+    --popover-foreground: #ddece3;
+    --primary: #00ff3b;
+    --primary-foreground: #000903;
+    --secondary: #0d1f16;
+    --secondary-foreground: #ddece3;
+    --muted: #0d1f16;
+    --muted-foreground: #83988c;
+    --accent: #032617;
+    --accent-foreground: #ddece3;
+    --destructive: #f42b5a;
+    --destructive-foreground: #f0f7f3;
+    --border: rgba(0, 255, 59, 0.26);
+    --input: rgba(0, 255, 59, 0.28);
+    --ring: rgba(0, 255, 59, 0.65);
+    --signal: #00ff3b;
+    --warn: #ffc800;
+    --alert: #ff0052;
+    --scan: #00eeff;
+  }
+
+  /* color-mix() is unavailable on the same browsers. */
+  html,
+  body {
+    background-color: #010804;
+    color: #00ff3b;
+  }
+
+  .scan-grid {
+    background-image:
+      linear-gradient(rgba(0, 255, 59, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 59, 0.07) 1px, transparent 1px);
+  }
+
+  .splash-ring {
+    animation: none;
+  }
+}
+
+/* dvh units are also missing on that WebView — fall back to vh. */
+@supports not (height: 100dvh) {
+  .h-dvh {
+    height: 100vh;
+  }
+  .min-h-dvh {
+    min-height: 100vh;
+  }
+}
+
+/**
+ * Explode-seek vector fallback (watch / legacy WebView).
+ * The AOSP 10 compositor kills the effects canvas, so the pulse is three
+ * SVG rings breathing on the GPU-cheap opacity channel only.
+ */
+.apex-pulse-ring {
+  animation: apex-pulse 3.69s ease-out infinite;
+  transform-origin: center;
+}
+.apex-pulse-1 {
+  animation-delay: 0.6s;
+}
+.apex-pulse-2 {
+  animation-delay: 1.2s;
+}
+@keyframes apex-pulse {
+  0% {
+    opacity: 0.05;
+  }
+  35% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0.05;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .apex-pulse-ring {
+    animation: none;
+  }
+}
+
+/* Doppler base map: keyless OpenStreetMap tiles inverted to an OLED-black
+   cartographic look, so the radar echoes stay the brightest thing on screen. */
+.doppler-basemap {
+  filter: invert(1) hue-rotate(185deg) brightness(0.72) saturate(0.35) contrast(1.15);
+}
+
+/* ---------------------------------------------------------------- controls
+   Information panels are flat bordered surfaces; anything you can press is a
+   control. Controls are rounded and sit on a faint translucent face so the two
+   are never mistaken for each other, whatever local classes a page applies. */
+:where(button, [role="button"], a.btn, .nav a, .watch-landing-actions a, .watch-landing-actions button) {
+  border-radius: 0.6rem;
+  background-color: color-mix(in oklab, var(--signal) 7%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+/* Square-ish local radii on pressable elements are lifted to the control
+   radius; info surfaces keep theirs. */
+button.rounded-none,
+button.rounded-xs,
+button.rounded-sm,
+a.rounded-none,
+a.rounded-xs,
+a.rounded-sm,
+[role="button"].rounded-sm,
+[role="button"].rounded-xs {
+  border-radius: 0.6rem;
+}
+
+/* Bordered link-style controls get the same faint face as buttons. */
+a.rounded-sm[class*="border"],
+a.rounded-xs[class*="border"],
+a.rounded-md[class*="border"] {
+  background-color: color-mix(in oklab, var(--signal) 7%, transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sovereign CB — daylight face.                                       */
+/* Reversed high-contrast panel for direct sun, matching the Doppler   */
+/* inverse look. Night stays the default OLED black face above.        */
+/* ------------------------------------------------------------------ */
+.cb-day {
+  --background: oklch(0.97 0.01 160);
+  --foreground: oklch(0.2 0.03 160);
+  --surface: oklch(0.92 0.01 160);
+  --card: oklch(0.99 0.005 160);
+  --card-foreground: oklch(0.2 0.03 160);
+  --popover: oklch(0.99 0.005 160);
+  --popover-foreground: oklch(0.2 0.03 160);
+  --primary: oklch(0.45 0.16 145);
+  --primary-foreground: oklch(0.99 0.005 160);
+  --secondary: oklch(0.9 0.02 160);
+  --secondary-foreground: oklch(0.2 0.03 160);
+  --muted: oklch(0.9 0.02 160);
+  --muted-foreground: oklch(0.42 0.03 160);
+  --accent: oklch(0.88 0.04 160);
+  --accent-foreground: oklch(0.2 0.03 160);
+  --border: oklch(0.35 0.06 160 / 45%);
+  --input: oklch(0.35 0.06 160 / 45%);
+  --ring: oklch(0.45 0.16 145 / 65%);
+  --signal: oklch(0.42 0.17 145);
+  --warn: oklch(0.55 0.17 75);
+  --alert: oklch(0.52 0.26 27);
+  --scan: oklch(0.45 0.17 245);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Sovereign CB — amber accents, inset radio bezel, map tile tone. */
+.cb-deck {
+  --warn: oklch(0.78 0.16 62);
+  --border: oklch(0.8 0.16 75 / 45%);
+  --accent: oklch(0.8 0.16 75 / 18%);
+  --ring: oklch(0.8 0.16 75 / 65%);
+  --grille: oklch(0.2 0.025 245);
+  --grille-slot: oklch(0.27 0.03 245);
+  --grille-line: oklch(0.42 0.03 245);
+  --radius: 0.7rem;
+}
+.cb-deck.cb-day {
+  --warn: oklch(0.53 0.16 58);
+  --border: oklch(0.55 0.15 70 / 55%);
+  --accent: oklch(0.85 0.12 75 / 40%);
+  --grille: oklch(0.72 0.025 245);
+  --grille-slot: oklch(0.82 0.02 245);
+  --grille-line: oklch(0.5 0.025 245);
+}
+.cb-deck.cb-dim {
+  --warn: oklch(0.45 0.09 62);
+  --signal: oklch(0.47 0.11 145);
+  --alert: oklch(0.55 0.15 25);
+  --foreground: oklch(0.67 0.015 150);
+  --muted-foreground: oklch(0.54 0.02 150);
+  --border: oklch(0.36 0.05 62 / 50%);
+}
+.cb-map-host.leaflet-container,
+.cb-map-host .leaflet-pane,
+.cb-map-host .leaflet-tile-container {
+  background-color: var(--background);
+}
+.cb-map-host.leaflet-container,
+.cb-deck .cb-map-section.fixed {
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.85 0.02 160);
+  --card: oklch(0.1 0.015 160);
+  --muted-foreground: oklch(0.7 0.02 160);
+  background-color: var(--background);
+}
+.cb-map-host .leaflet-overlay-pane svg { background: transparent; }
+.cb-map-host .leaflet-popup-content-wrapper,
+.cb-map-host .leaflet-popup-tip,
+.cb-map-host .leaflet-tooltip {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.cb-map-satellite { filter: brightness(0.48) contrast(1.15); }
+.cb-ptt-light {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  opacity: 0.45;
+}
+.cb-ptt-light.cb-ptt-live { background: var(--warn); opacity: 1; }
+.cb-dim .cb-map-tiles { opacity: 0.42; }
+.cb-dim .cb-map-satellite { filter: brightness(0.22) contrast(1.1); }
+.cb-dim .cb-map-host .leaflet-interactive { opacity: 0.62; }
+.cb-map-host .leaflet-control-container { display: none; }
+.cb-bezel {
+  position: relative;
+  border: 3px solid var(--warn);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 0 0 2px var(--background),
+    inset 0 0 0 4px var(--border),
+    inset 0 0 24px color-mix(in oklab, var(--warn) 25%, transparent),
+    0 7px 18px color-mix(in oklab, var(--warn) 14%, transparent);
+}
+/* Chassis chrome — the black radio shell the amber bezel sits on. The app
+   header and the knob shelf ride on it so light browser chrome never shows
+   through in installed-app mode. Scoped foreground tokens keep the header
+   legible on black in the daylight face too. */
+.cb-chrome {
+  --foreground: oklch(0.87 0.04 75);
+  --muted-foreground: oklch(0.6 0.03 75);
+  background: linear-gradient(180deg, oklch(0.17 0.012 75), oklch(0.1 0.008 75));
+  border-color: color-mix(in oklab, var(--warn) 40%, transparent);
+}
+.cb-knob {
+  background: radial-gradient(circle at 50% 30%, oklch(0.26 0.02 75), oklch(0.12 0.01 75) 72%);
+  box-shadow: inset 0 1px 2px oklch(0.35 0.03 75 / 55%), 0 2px 5px oklch(0 0 0 / 55%);
+}
+/* Knurled mounting stem from the drawing — the knob rolls on it, side-mounted. */
+.cb-knob-stem {
+  height: 6px;
+  width: 14px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, oklch(0.34 0.02 75) 0 2px, oklch(0.14 0.01 75) 2px 4px);
+  box-shadow: inset 0 -1px 2px oklch(0 0 0 / 50%);
+}
+.cb-bezel::after {
+  content: "";
+  position: absolute;
+  z-index: 20;
+  inset: 1px;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
+  background: linear-gradient(115deg, transparent 0%, transparent 43%, color-mix(in oklab, var(--warn) 25%, transparent) 50%, transparent 57%, transparent 100%);
+  background-size: 300% 100%;
+  animation: cb-edge-glint 9s ease-in-out infinite;
+}
+@keyframes cb-edge-glint {
+  0%, 76%, 100% { background-position: 100% 0; }
+  88% { background-position: 0 0; }
+}
+.cb-deck :is(button, textarea, input, .border, .border-2, .border-\[3px\]) {
+  border-radius: max(0.4rem, var(--radius));
+}
+.cb-channel-controls, .cb-channel-display {
+  box-shadow: inset 0 2px 3px color-mix(in oklab, var(--background) 42%, transparent), 0 3px 0 color-mix(in oklab, var(--warn) 20%, transparent);
+}
+.cb-channel-display {
+  box-shadow: inset 0 0 0 2px var(--border), inset 0 0 18px color-mix(in oklab, var(--warn) 12%, transparent), 0 4px 9px color-mix(in oklab, var(--background) 35%, transparent);
+}
+.cb-channel-digits {
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 76px;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px color-mix(in oklab, var(--warn) 35%, transparent);
+}
+@media (min-width: 640px) { .cb-channel-digits { font-size: 112px; } }
+@media (max-width: 350px) { .cb-channel-digits { font-size: 60px; } }
+.cb-grille {
+  background: var(--grille);
+  border-color: var(--grille-line);
+  box-shadow: inset 0 2px 7px color-mix(in oklab, var(--background) 70%, transparent), 0 3px 8px color-mix(in oklab, var(--background) 40%, transparent);
+}
+.cb-grille-slot {
+  background: repeating-linear-gradient(0deg, var(--grille-slot) 0 2px, var(--grille) 2px 4px);
+  border: 1px solid var(--grille-line);
+}
+.cb-grille-filled { border-color: var(--warn); }
+.cb-grille-led { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--grille-line); }
+.cb-grille-filled .cb-grille-led { background: var(--warn); opacity: .4; }
+.cb-grille-filled .cb-grille-playing { opacity: 1; box-shadow: 0 0 7px var(--warn); }
+.cb-grille-stripe { height: 3px; border-radius: 3px; background: var(--grille-line); opacity: .25; }
+.cb-grille-audio { color-scheme: dark; }
+.cb-grille-warning { animation: cb-warning-flash 1s ease-in-out infinite alternate; }
+@keyframes cb-warning-flash { from { box-shadow: 0 0 0 var(--warn); } to { box-shadow: 0 0 10px var(--warn); } }
+.cb-entry { min-height: 100dvh; }
+.cb-entry img { object-position: center; }
+@media (prefers-reduced-motion: reduce) {
+  .cb-bezel::after, .cb-grille-warning { animation: none; }
+}
+.cb-scan-led {
+  box-shadow: 0 0 9px var(--warn), 0 0 18px var(--warn);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cb-scan-led { box-shadow: none; }
+}
+.cb-deck:not(.cb-day) .cb-map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.1);
+}
