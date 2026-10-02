@@ -69,3 +69,30 @@ variables — create your own project and fill them in.
 
 See [LICENSE](LICENSE). Fork, learn, build, contribute — the protected math
 and the operator scripts stay with the owner.
+
+## The echelon ladder — fork in, climb up
+
+This repo is the free rung. Every rung above it is unlocked by shipping, not
+by asking:
+
+| Rung | You did | You get |
+| --- | --- | --- |
+| E0 — Fork | Cloned the shell | 3 handsets, 40 channels, linear scan, public-data weather |
+| E1 — First merged PR | One pull request merged upstream | Community API key (metered), 80 channels |
+| E2 — Working feature | A feature the community actually uses | 160-channel block scanner |
+| E3 — Viable endpoint | A fork that stands on its own | 270-channel recursive stack scanner |
+| E4 — Commercial | You sell something built on the shell | Commercial API keys, revenue-share licence |
+
+Keys are per-contributor, metered, and revocable. Request yours at
+**https://tinyradr.com/api-access** — tell us your GitHub handle and what you
+are building. Every request is reviewed by hand.
+
+The multi-carrier handset-to-handset daisy chain is **not** on this ladder.
+It is the top prize and ships only under a signed licence.
+
+## Come and get it
+
+If you found this repo from a video or a post: yes, it really is a working
+browser CB radio deck you can fork tonight. Star it, fork it, break it, send
+a PR. The ladder above is real — the first merged pull request gets you a
+key.
