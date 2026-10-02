@@ -1,12 +1,17 @@
 /**
- * Local link bus for the CB deck — every non-cloud carrier (field mesh,
- * USB cable) registers here. The PTT deck fans each transmission out to all
- * live links and receives from all of them, so a key-up reaches peers over
- * whatever path exists, with or without internet.
+ * Community shell stub — local link bus.
  *
- * Legal line: CB radio (Part 95) forbids coded/encrypted messages, so the
- * over-the-air CB path stays in the clear. Encryption lives only on the
- * digital links (Wi-Fi mesh, USB, Bluetooth), which are not CB transmissions.
+ * The production build fans each transmission out to every live local
+ * carrier (field mesh, USB serial radio, BLE bridge) with dedupe and
+ * daisy-chain relay, so a key-up reaches peers with or without internet.
+ * That handset-to-handset chain is licensed technology and is NOT included
+ * in this community shell. This stub keeps the public interface so the
+ * deck compiles; no local carriers can be registered here.
+ *
+ * The cloud relay carrier (used by the PTT deck) is unaffected.
+ *
+ * Licence: see LICENSE — commercial use of the chain requires a licence
+ * and revenue share. API access: https://tinyradr.com
  */
 import { useSyncExternalStore } from "react";
 
@@ -17,11 +22,8 @@ export type LinkFrame = {
   kind: "voice" | "text";
   body: string;
   ts: number;
-  /** relay hops travelled so far — incremented on every daisy-chain pass */
   hops?: number;
-  /** Exact digital room; channel number alone cannot distinguish subrooms. */
   roomId?: string;
-  /** Never pass through a physical CB transmitter. */
   digitalOnly?: boolean;
 };
 
@@ -30,49 +32,34 @@ export type LinkKind = "mesh" | "usb";
 type Link = {
   kind: LinkKind;
   send: (f: LinkFrame) => void;
-  /** voice clips are too large for serial radios */
   carriesVoice: boolean;
 };
 
-const links = new Map<LinkKind, Link>();
 const rxHandlers = new Set<(f: LinkFrame) => void>();
 const seen = new Set<string>();
 const subs = new Set<() => void>();
-let snapshot: LinkKind[] = [];
+const snapshot: LinkKind[] = [];
 
-function emit() {
-  snapshot = [...links.keys()];
-  subs.forEach((s) => s());
+/** Licensed in the production build — no-op here. */
+export function registerLink(_l: Link) {
+  /* community shell: local carriers are a licensed feature */
 }
 
-export function registerLink(l: Link) {
-  links.set(l.kind, l);
-  emit();
+export function unregisterLink(_kind: LinkKind) {
+  /* community shell: no-op */
 }
 
-export function unregisterLink(kind: LinkKind) {
-  links.delete(kind);
-  emit();
-}
-
-/** Called by a link when a frame arrives. Deduped across all links. */
-export function deliver(f: LinkFrame, via: LinkKind) {
+/** Dedupe + dispatch still work so the deck's receive path is intact. */
+export function deliver(f: LinkFrame, _via: LinkKind) {
   if (seen.has(f.id)) return;
   seen.add(f.id);
   if (seen.size > 2000) seen.clear();
   rxHandlers.forEach((h) => h(f));
-  // Daisy-chain: relay onward over the other links, one hop further out.
-  const onward = { ...f, hops: (f.hops ?? 0) + 1 };
-  links.forEach((l) => {
-    if (l.kind !== via && !(f.digitalOnly && l.kind === "usb") && (f.kind === "text" || l.carriesVoice)) l.send(onward);
-  });
 }
 
+/** Licensed in the production build — no local carriers to fan out to. */
 export function sendAll(f: LinkFrame) {
   seen.add(f.id);
-  links.forEach((l) => {
-    if (!(f.digitalOnly && l.kind === "usb") && (f.kind === "text" || l.carriesVoice)) l.send(f);
-  });
 }
 
 export function onLinkFrame(h: (f: LinkFrame) => void): () => void {

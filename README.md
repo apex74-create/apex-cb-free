@@ -25,7 +25,15 @@ that is where the licence comes in.
 The proprietary math. The synthesis engines, wave-collapse forecast logic,
 the shield's scoring and timing parameters, the operator field scripts, token
 minting, licence signing and device binding all live in the private tree and
-compile into the licensed native build. Stub modules under `src/lib/engines/`
+compile into the licensed native build.
+
+**The handset-to-handset daisy chain is licensed technology and is not in
+this repo.** The local link bus (`src/lib/cb-links.ts`), the field-mesh
+carrier, the USB serial radio bridge, the BLE bridge, local node discovery,
+private invitations and squad position sharing are all stubs here. The free
+shell carries traffic over the cloud relay only — two phones on the same
+channel, like any walkie app. Multi-carrier device-to-device relay (hotspot
++ BLE + USB, one channel, no server) ships with a licensed build. Stub modules under `src/lib/engines/`
 keep the shell's type surface intact and degrade gracefully; `src/lib/papers.ts`
 is an empty stub — the paper library is private.
 
