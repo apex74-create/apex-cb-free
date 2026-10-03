@@ -13,7 +13,7 @@ that is where the licence comes in.
 
 | Forecast map | Weather |
 | --- | --- |
-| ![Forecast map — tap to set location](docs/screenshots/map.png) | ![Weather — wave-synthesis outlook](docs/screenshots/weather.png) |
+| ![Forecast map — tap to set location](docs/screenshots/map.png) | ![Weather — public-data outlook](docs/screenshots/weather.png) |
 
 ## What is in here
 
@@ -72,8 +72,7 @@ variables — create your own project and fill them in.
   and the private tree.
 - **API keys** for the proprietary engines are issued per contributor, metered
   and revocable. The free tier covers community development; paid tiers are
-  for anything shipping to end users. Request keys through the store page on
-  [tinyradr.com](https://tinyradr.com).
+  for anything shipping to end users. Request keys through the [manual application](https://tinyradr.com/api-access).
 
 ## Licence
 
@@ -120,3 +119,11 @@ If you found this repo from a video or a post: yes, it really is a working
 browser CB radio deck you can fork tonight. Star it, fork it, break it, send
 a PR. The ladder above is real — the first merged pull request gets you a
 key.
+
+## Three addresses, three playful field editions
+
+[TinyRadr](https://tinyradr.com) is the depot and Enphase weather entrance, [Encrypted CB](https://encryptedcb.com) is the urban CB entrance, and [Cast Net Mesh](https://castnetmesh.com) is the event-mesh entrance. The depot also lists [UAP Field Station](https://tinyradr.com/uap), [Halloween Ghost Station](https://tinyradr.com/ghost), and [Mystic 9 Ball](https://tinyradr.com/mystic-nine) as separate $9.99-once editions. These paid editions are **not included in this free fork**. The free radar, map, weather and CB remain available without them. Sandbox checkout and server-issued licence delivery still require end-to-end verification; production payment is not claimed here. Detector traces are available-sensor observations, not a 3D room scan or evidence of a paranormal or extraterrestrial cause; the nine ball is a symbolic game.
+
+The founder observed three app experiences assembled in about 18 minutes using the shared Foundry workflow, Lovable vibe coding and AI-agent collaboration. This describes that session, not a reproducible benchmark. Foundry organizes policy, permitted engines, adapters, labeled evidence and app skins; protected math and token economics remain private.
+
+Want to make the free shell cooler? Start with a good-first-contribution above, add a failing-device reproduction or accessibility test, and send a focused PR. Request engine access separately through the manual application; a fork or a PR does not by itself grant commercial rights or private IP.
