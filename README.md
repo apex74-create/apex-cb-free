@@ -20,7 +20,7 @@ that is where the licence comes in.
 - `src/routes/` — CB radio deck UI, watch faces, map, pricing page, store and
   auth shells. The engine-showcase screens are not part of the shell.
 - `src/components/` — UI primitives and the project chrome.
-- `src/lib/cb-links.ts`, `src/lib/cb-routes.ts`, `src/lib/rooms.ts` — the
+- `src/lib/cb-links.ts`, `src/lib/cb-routes.tsa, `src/lib/rooms.ts` — the
   carrier bus and room routing (public protocol surface). Rooms `19` / `19.1`
   / `19.1.1`, bus `ptt-<id>`; `tune()` takes `{ roomId, key }`.
 - `src/lib/engines/tristar-addressing.ts` — the wire-format header carried on
@@ -127,3 +127,19 @@ key.
 The founder observed three app experiences assembled in about 18 minutes using the shared Foundry workflow, Lovable vibe coding and AI-agent collaboration. This describes that session, not a reproducible benchmark. Foundry organizes policy, permitted engines, adapters, labeled evidence and app skins; protected math and token economics remain private.
 
 Want to make the free shell cooler? Start with a good-first-contribution above, add a failing-device reproduction or accessibility test, and send a focused PR. Request engine access separately through the manual application; a fork or a PR does not by itself grant commercial rights or private IP.
+
+## Badges and the contributors wall
+
+The echelon ladder above tracks what you unlock. The badge ladder in
+[BADGES.md](BADGES.md) tracks who you are: Contributor, Builder, Operator,
+Assembly unlock, and the invitation-only daisy-chain licence. Badges are
+awarded as PR labels by the owner and recorded here.
+
+### Contributors wall
+
+| Contributor | Badge | Merged work |
+| --- | --- | --- |
+| _your handle here_ | `level:contributor` | _your first merged PR_ |
+
+One merged PR puts your name on this wall. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the terms.
