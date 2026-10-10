@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { listProducts } from "@/lib/catalog.functions";
 import { CATEGORY_LABEL, priceLabel } from "@/lib/catalog";
 import heroAsset from "@/assets/foundry-engine.jpg.asset.json";
+import { OPERATOR_BRIDGE_COPY } from "@/lib/operator-bridge-copy";
 
 const HERO = heroAsset.url;
 
@@ -119,6 +120,9 @@ function StoreIndex() {
         </section>
 
         {/* enterprise briefing */}
+        <p className="mt-5 border-l-2 border-signal/60 pl-3 text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Operator bridge · </strong>{OPERATOR_BRIDGE_COPY}
+        </p>
         <section className="mt-6 rounded-sm border border-warn/50 bg-warn/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-warn">
             Enterprise briefing

@@ -195,6 +195,9 @@ export async function fetchCloudTier(): Promise<string | null> {
     .select("tier")
     .eq("user_id", userId)
     .maybeSingle();
+  if (data?.tier === "operator" || data?.tier === "elite") return data.tier;
+  const { data: tester } = await supabase.from("family_test_access").select("expires_at, revoked_at").eq("user_id", userId).maybeSingle();
+  if (tester && !tester.revoked_at && new Date(tester.expires_at).getTime() > Date.now()) return "elite";
   return data?.tier ?? null;
 }
 

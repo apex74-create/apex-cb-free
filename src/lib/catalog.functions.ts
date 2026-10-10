@@ -156,9 +156,10 @@ export const listMyLicences = createServerFn({ method: "GET" })
     const supabase = context.supabase as unknown as SupabaseClient;
     const { data, error } = await supabase
       .from("licences")
-      .select("product_slug, licence_key, status, expires_at, created_at")
+       .select("product_slug, licence_key, status, expires_at, created_at")
       .eq("user_id", context.userId)
-      .eq("status", "active");
+       .eq("status", "active")
+       .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
     if (error) {
       console.error("licence read failed", error.message);

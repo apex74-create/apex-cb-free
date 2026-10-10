@@ -1,5 +1,6 @@
 /** Local-only radio cadence. No FX audio is sent over a carrier. */
 let context: AudioContext | null = null;
+let prestaged = false;
 
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -10,6 +11,26 @@ function audio(): AudioContext | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Pre-stage the audio context on the very first user gesture, long before
+ * the first key-up. Browsers start an AudioContext "suspended" until a
+ * gesture; creating it lazily at the first chirp meant the entrance cadence
+ * was swallowed while resume() was still pending — the stall heard in the
+ * first Channel 19 field test. Once any pointer or key touches the page,
+ * the context is created and resumed so the first beep always sounds.
+ */
+export function prestageCadenceAudio() {
+  if (prestaged || typeof window === "undefined") return;
+  prestaged = true;
+  const warm = () => {
+    audio();
+    window.removeEventListener("pointerdown", warm);
+    window.removeEventListener("keydown", warm);
+  };
+  window.addEventListener("pointerdown", warm, { passive: true });
+  window.addEventListener("keydown", warm);
 }
 
 export function chirp() {

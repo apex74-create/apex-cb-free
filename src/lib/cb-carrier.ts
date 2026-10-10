@@ -68,8 +68,8 @@ export function pickCarrier(online: boolean, s: CarrierSignals): CarrierState {
     return {
       active: "hotspot",
       reason: online
-        ? "relay unreachable — start the phone self-node"
-        : "network down — start the phone self-node or pair Bluetooth",
+        ? "relay unreachable — pair phones under Field Links to talk direct"
+        : "no internet — pair phones on this hotspot under Field Links",
       online,
       available,
     };

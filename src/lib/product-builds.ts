@@ -85,6 +85,68 @@ export const PRODUCT_BUILDS: ProductBuild[] = [
   },
 ];
 
+/**
+ * CB intercom tiers — the left-hand skeleton panel in every app that
+ * carries CB. The tier comes from checkLicences; the panel reads these
+ * limits, never hardcodes them.
+ *
+ * - free: base intercom. 20 channels, constant 20-channel scan,
+ *   double-tap stops the scan and transmits, lands on the agreed preset
+ *   channel (9 / 19 / 7). Top-bar CB buttons disabled.
+ * - full: toggle between the intercom view and the full CB deck.
+ * - pro: 40 channels; max: 80+ channels, following the existing schemas.
+ *
+ * Ceilings stay within the carrier rules: USB carriers only ever send
+ * channels 1–40; anything above is digital-only.
+ */
+export type CbTier = "free" | "full" | "pro" | "max";
+
+export const CB_TIERS: Record<CbTier, { channels: number; scan: boolean; fullDeck: boolean; presetChannel: number }> = {
+  free: { channels: 20, scan: true, fullDeck: false, presetChannel: 19 },
+  full: { channels: 40, scan: true, fullDeck: true, presetChannel: 19 },
+  pro: { channels: 40, scan: true, fullDeck: true, presetChannel: 19 },
+  max: { channels: 80, scan: true, fullDeck: true, presetChannel: 19 },
+};
+
+/**
+ * Greenhouse skin skeletons — skins over the shared skeleton, composed
+ * from existing modules (CB intercom, Event Mesh grower plot layout,
+ * CYD radar panel). Tier gates run through the existing licence check;
+ * no forked code.
+ */
+export type GreenhouseSkin = {
+  id: "greenhouse-base" | "greenhouse-pro";
+  name: string;
+  cbTier: CbTier;
+  /** Daisy-chain handsets allowed on the primary access point. */
+  daisyChainHandsets: number;
+  /** Secondary handsets may transmit packet data. */
+  secondaryTransmit: boolean;
+  tools: string[];
+  note: string;
+};
+
+export const GREENHOUSE_SKINS: GreenhouseSkin[] = [
+  {
+    id: "greenhouse-base",
+    name: "Base Model Greenhouse",
+    cbTier: "free",
+    daisyChainHandsets: 10,
+    secondaryTransmit: false,
+    tools: ["cb-intercom", "grower-plot-layout"],
+    note: "10 daisy-chained handsets on the primary access point (11 operating total); secondaries receive only. 20-channel intercom plus the Event Mesh Grower's Edition plot layout: plots, fields, streams, forests, walkway paths.",
+  },
+  {
+    id: "greenhouse-pro",
+    name: "Guerrilla Growers Pro",
+    cbTier: "max",
+    daisyChainHandsets: 10,
+    secondaryTransmit: true,
+    tools: ["cb-full", "mesh-full", "cyd-radar"],
+    note: "Maxed-out CB, full mesh, and the left-hand CYD radar panel: plug in a CYD to see radio-signal-adjacent movement nearby that the Shield couldn't see. Signal-adjacent indication only — never person identification.",
+  },
+];
+
 export function currentProductId(): ProductId {
   const v = (import.meta.env["VITE_BUILD_PROFILE"] as string | undefined) ?? "cb";
   return (PRODUCT_BUILDS.some((b) => b.id === v) ? v : "cb") as ProductId;

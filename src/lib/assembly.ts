@@ -215,9 +215,51 @@ export type FieldScript = {
   notes: string;
 };
 
-/**
- * First-party proprietary field scripts ship ONLY via a signed operator
- * licence — they are deliberately absent from the community mirror.
- * Access is per-operator, metered and revocable; see the store listing.
- */
-export const FIELD_SCRIPTS: FieldScript[] = [];
+export const FIELD_SCRIPTS: FieldScript[] = [
+  {
+    key: "tristar-proxy",
+    name: "Tri-Star Traffic Sanitizer",
+    file: "/agent/tristar_proxy.py",
+    role: "Non-rooted 3-gate outbound proxy: PE sweet-spot sweep (368–370), randomized bracket (342–396) and hard-boundary scrape, with an 11,000 ms timed escapement release.",
+    usedBy:
+      "Sits in front of PCAPdroid's mitm socket so anything leaving the handset is scrubbed of IMEI, IMSI, MAC and precise location before it reaches the mesh or our aggregate endpoints — this is what enforces the fine-in / canonical-out rule the privacy statement and the data agreement promise.",
+    fetch: "curl -fsSL https://tinyradr.lovable.app/agent/tristar_proxy.py -o ~/tristar_proxy.py",
+    run: "pkg install python -y && python ~/tristar_proxy.py",
+    notes:
+      "Point PCAPdroid-mitm at 127.0.0.1 on the port the script prints. No root. Drops any field it cannot classify rather than forwarding it.",
+  },
+  {
+    key: "new-barware",
+    name: "New Barware — Trusted Cell Lock",
+    file: "/agent/new_barware.sh",
+    role: "Watches raw RIL radio logs for tracking-area changes from rogue base stations and refuses forced relocation by cutting cellular data only — the radio stays up for emergency calls.",
+    usedBy:
+      "The IMSI-catcher guard behind the operator field tier: it is what lets a crew keep working on mesh when a rogue tower tries to pull the handset off its trusted cell.",
+    fetch: "curl -fsSL https://tinyradr.lovable.app/agent/new_barware.sh -o ~/new_barware.sh",
+    run: "sh ~/new_barware.sh --pin   # then: sh ~/new_barware.sh --mode lock",
+    notes:
+      "Termux + wireless ADB on 127.0.0.1, no root. --pin learns the current tower; default mode monitors and alerts only. Log at ~/new_barware.log.",
+  },
+  {
+    key: "termux-setup",
+    name: "Termux Field Setup",
+    file: "/agent/termux-setup.sh",
+    role: "One-shot Termux preparation: packages, wake lock, boot hooks and the ADB pairing the other scripts assume.",
+    usedBy: "Run first on any new handset before the bridge agent or the two guards above.",
+    fetch: "curl -fsSL https://tinyradr.lovable.app/agent/termux-setup.sh -o ~/termux-setup.sh",
+    run: "sh ~/termux-setup.sh",
+    notes: "Safe to re-run; it skips anything already in place.",
+  },
+  {
+    key: "bridge-agent",
+    name: "ADB Bridge Agent",
+    file: "/agent/adb-bridge-agent.mjs",
+    role: "Local listener on port 3001 that the console's install and sweep buttons drive over the bridge.",
+    usedBy:
+      "Every live device read in this app — installed-package sweep, compatibility profile, one-tap installs.",
+    fetch:
+      "curl -fsSL https://tinyradr.lovable.app/agent/adb-bridge-agent.mjs -o ~/apex/agent/adb-bridge-agent.mjs",
+    run: "node ~/apex/agent/adb-bridge-agent.mjs --port 3001",
+    notes: "Bind it to localhost only. Nothing on it is reachable from off the handset.",
+  },
+];

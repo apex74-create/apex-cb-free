@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { MESH } from "@/lib/app-routes";
 import { useBridge } from "@/lib/bridge-hooks";
 import { SHELL_GROUPS, type ShellTool } from "@/lib/shell-tools";
 import { toneClass, toneBorder } from "@/lib/tools";
 
 /**
- * Global bridge shell.
+ * Global bridge shell — Signal Network Operator package only (gated at the root).
  *
  * Mounted once at the root so every screen in the watch PWA — face, maps,
  * tools, netchat — can run real `adb shell` tools without leaving the view.
@@ -23,7 +24,9 @@ export default function ShellDock() {
   const [out, setOut] = useState("");
 
   // The dedicated bridge screen already owns a full deck.
-  const hidden = pathname.startsWith("/bridge");
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => setEmbedded(window.self !== window.top), []);
+  const hidden = embedded || pathname.startsWith("/bridge");
 
   useEffect(() => {
     if (hidden) setOpen(false);
@@ -62,8 +65,8 @@ export default function ShellDock() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open bridge shell"
-        className={`fixed bottom-16 right-2 z-50 grid h-9 w-9 place-items-center rounded-full border bg-background/85 text-[13px] leading-none backdrop-blur-sm active:bg-accent ${
-          live ? "border-signal text-signal" : "border-warn bg-warn/10 text-warn"
+        className={`fixed bottom-16 right-2 z-50 grid h-7 w-7 place-items-center rounded-full border bg-background/30 text-[10px] leading-none opacity-60 backdrop-blur-sm active:bg-accent active:opacity-100 ${
+          live ? "border-signal/60 text-signal" : "border-warn/50 text-warn"
         }`}
         style={{ marginBottom: "var(--face-inset, 0px)", marginRight: "var(--face-inset, 0px)" }}
       >
@@ -85,6 +88,14 @@ export default function ShellDock() {
             {live ? "adb via bridge agent" : "tap to reconnect"}
           </span>
         </button>
+        <div className="flex shrink-0 items-center gap-2">
+        <Link
+          to={MESH.bridge}
+          onClick={() => setOpen(false)}
+          className="rounded-sm border border-signal/60 px-1.5 py-0.5 text-[8px] uppercase tracking-widest text-signal"
+        >
+          Bridge console
+        </Link>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -93,6 +104,7 @@ export default function ShellDock() {
         >
           ✕
         </button>
+        </div>
       </header>
 
       <nav className="no-scrollbar flex shrink-0 gap-1 overflow-x-auto border-b border-border face-pad py-1">

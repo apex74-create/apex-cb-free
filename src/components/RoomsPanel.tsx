@@ -80,7 +80,7 @@ export function RoomsPanel({ channel, active, onSelect }: Props) {
           rooms · on {active}
           {active.includes(".") ? " · side room" : " · calling channel"}
         </span>
-        <span>{open ? "−" : "+"}</span>
+        <span className="ml-2 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border">{open ? "−" : "+"}</span>
       </button>
 
       {open ? (

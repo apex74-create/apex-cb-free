@@ -25,7 +25,12 @@ export default function ScreenAwake() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
 
-    // ---- hold 2: media keep-alive (runs everywhere, costs one hidden pixel)
+    // ---- hold 2: media keep-alive — only for watch-sized panels or browsers
+    // without Wake Lock. On laptops/Chromebooks a full-viewport video under
+    // every page is pure GPU/decoder load and was locking machines up.
+    const nav0 = navigator as Navigator & { wakeLock?: unknown };
+    const small = Math.min(window.screen?.width ?? 9999, window.screen?.height ?? 9999) < 520;
+    const useVideo = !nav0.wakeLock || small;
     const video = document.createElement("video");
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
@@ -52,8 +57,9 @@ export default function ScreenAwake() {
       s.type = type;
       video.appendChild(s);
     }
-    document.body.appendChild(video);
+    if (useVideo) document.body.appendChild(video);
     const play = () => {
+      if (!useVideo) return;
       if (document.visibilityState !== "visible") return;
       if (video.paused || video.ended) void video.play().catch(() => {});
     };
@@ -89,12 +95,15 @@ export default function ScreenAwake() {
     // has actually stalled, which silently drops the hold. If the clock has not
     // moved between ticks, reload and restart it.
     let lastTime = -1;
+    let lastReload = 0;
     const kick = () => {
+      if (!useVideo) return;
       if (video.paused || video.ended) {
         play();
         return;
       }
-      if (video.currentTime === lastTime) {
+      if (video.currentTime === lastTime && Date.now() - lastReload > 30_000) {
+        lastReload = Date.now();
         try {
           video.load();
         } catch {

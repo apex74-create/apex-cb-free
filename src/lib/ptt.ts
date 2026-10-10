@@ -45,11 +45,18 @@ const CALL_KEY = "apex.ptt.callsign";
 /** Realtime payloads are capped; keep a transmission short like a real key-up. */
 export const MAX_KEY_MS = 8000;
 
+/** Owner-reserved callsigns: never rolled at random, never typed in by guests. */
+export const RESERVED_CALLSIGNS = new Set(["APEX-369", "APEX369"]);
+export const isReservedCallsign = (v: string) =>
+  RESERVED_CALLSIGNS.has(v.trim().toUpperCase());
+
 export function loadCallsign(): string {
   if (typeof window === "undefined") return "APEX";
   const v = window.localStorage.getItem(CALL_KEY);
-  if (v) return v;
-  const gen = `APEX-${Math.floor(Math.random() * 900 + 100)}`;
+  if (v && !isReservedCallsign(v)) return v;
+  let n = 369;
+  while (n === 369) n = Math.floor(Math.random() * 900 + 100);
+  const gen = `APEX-${n}`;
   try {
     window.localStorage.setItem(CALL_KEY, gen);
   } catch {
@@ -58,12 +65,15 @@ export function loadCallsign(): string {
   return gen;
 }
 
-export function saveCallsign(v: string) {
+/** Returns false when the callsign is reserved and was not saved. */
+export function saveCallsign(v: string): boolean {
+  if (isReservedCallsign(v)) return false;
   try {
     window.localStorage.setItem(CALL_KEY, v.slice(0, 12).toUpperCase());
   } catch {
     /* storage locked */
   }
+  return true;
 }
 
 export const roomOf = (n: number) => `ptt-${String(n).padStart(2, "0")}`;
@@ -187,12 +197,13 @@ export function tune(
   };
 
   const wake = () => {
-    if (!live && !left) {
-      retry = 0;
-      if (timer) clearTimeout(timer);
-      timer = null;
-      join();
-    }
+    if (left) return;
+    // A backgrounded/sleeping screen can leave the socket stale while it still
+    // looks "live", so always rejoin on wake — join() drops the old channel.
+    retry = 0;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    join();
   };
   const onVis = () => document.visibilityState === "visible" && wake();
   window.addEventListener("online", wake);

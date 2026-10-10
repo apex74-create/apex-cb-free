@@ -4,6 +4,7 @@ import { isFeatureSlug } from "@/lib/features";
 import FaceToggle from "@/components/FaceToggle";
 import FeatureReel from "@/components/FeatureReel";
 import LandingFace from "@/components/LandingFace";
+import { useOperatorAccess } from "@/lib/use-operator-access";
 
 type LandingSearch = { feature?: string | undefined; view?: "reel" | "grid" | "face" | undefined };
 
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/app")({
 });
 
 function Landing() {
+  const operator = useOperatorAccess();
   const { feature, view = "face" } = Route.useSearch();
   const navigate = Route.useNavigate();
 
@@ -50,10 +52,22 @@ function Landing() {
       replace: true,
     });
 
-  if (view === "face") return <LandingFace onEnter={setView} />;
+  // Face preference: if the user last picked the multicolor weather face,
+  // the watch lands there instead of the Apex face.
+  if (view === "face") {
+    try {
+      if (window.localStorage.getItem("apex.face") === "weather") {
+        window.location.replace("/watch.html");
+        return null;
+      }
+    } catch {
+      /* storage blocked — stay on the Apex face */
+    }
+    return <LandingFace onEnter={setView} />;
+  }
 
   return (
-    <main className="no-scrollbar min-h-app overflow-y-auto scan-grid face-pad pb-6 pt-2">
+    <main className="no-scrollbar relative min-h-app overflow-y-auto scan-grid face-pad pb-6 pt-2">
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 pb-2">
         <div className="min-w-0">
           <h1 className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-signal">
@@ -95,7 +109,7 @@ function Landing() {
         <FeatureReel slug={feature} onSelect={select} />
       ) : (
         <>
-          <Link
+           {operator && <Link
             to="/bridge"
             className="mb-1.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-sm border border-scan/50 bg-card/70 px-2 py-1.5 active:bg-accent"
           >
@@ -109,7 +123,7 @@ function Landing() {
               </span>
             </span>
             <span className="shrink-0 text-[10px] text-muted-foreground">›</span>
-          </Link>
+           </Link>}
 
           <div className="mb-1.5 grid grid-cols-3 gap-1.5">
             <Link
@@ -149,22 +163,6 @@ function Landing() {
           </Link>
 
           <Link
-            to="/ptt"
-            className="mb-1.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-sm border border-alert/50 bg-card/70 px-2 py-1.5 active:bg-accent"
-          >
-            <span className="shrink-0 text-sm leading-none text-alert">◉</span>
-            <span className="min-w-0">
-              <span className="block truncate text-[10px] font-bold uppercase tracking-widest text-alert">
-                PTT · CB
-              </span>
-              <span className="block truncate text-[8px] uppercase tracking-wider text-muted-foreground">
-                bridgeless push-to-talk · ch 1-40
-              </span>
-            </span>
-            <span className="shrink-0 text-[10px] text-muted-foreground">›</span>
-          </Link>
-
-          <Link
             to="/cb"
             className="mb-1.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-sm border border-alert/50 bg-card/70 px-2 py-1.5 active:bg-accent"
           >
@@ -180,7 +178,7 @@ function Landing() {
             <span className="shrink-0 text-[10px] text-muted-foreground">›</span>
           </Link>
 
-          <Link
+           {operator && <Link
             to="/pcap"
             className="mb-1.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-sm border border-signal/50 bg-card/70 px-2 py-1.5 active:bg-accent"
           >
@@ -194,9 +192,9 @@ function Landing() {
               </span>
             </span>
             <span className="shrink-0 text-[10px] text-muted-foreground">›</span>
-          </Link>
+           </Link>}
 
-          <Link
+           {operator && <Link
             to="/admin"
             className="mb-1.5 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-sm border border-alert/50 bg-card/70 px-2 py-1.5 active:bg-accent"
           >
@@ -210,7 +208,7 @@ function Landing() {
               </span>
             </span>
             <span className="shrink-0 text-[10px] text-muted-foreground">›</span>
-          </Link>
+           </Link>}
 
           <Link
             to="/face"

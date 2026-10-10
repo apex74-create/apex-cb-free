@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { useBridge } from "@/lib/bridge-hooks";
 import TierPanel from "@/components/TierPanel";
 import CloudPanel from "@/components/CloudPanel";
+import OperatorGate from "@/components/OperatorGate";
 import {
   blankSteps,
   reportText,
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/admin")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: Admin,
+  component: () => <OperatorGate><Admin /></OperatorGate>,
 });
 
 const TONE: Record<Step["state"], string> = {

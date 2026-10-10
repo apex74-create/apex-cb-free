@@ -73,6 +73,28 @@ export function socketScheme(): "ws" | "wss" {
   return isSecurePage() ? "wss" : "ws";
 }
 
+/** Loopback agent: same device, so no certificate and no internet needed. */
+export const LOCAL_AGENT_URL = `ws://127.0.0.1:${AGENT_PORT}/adb`;
+
+export function isLoopbackUrl(url: string): boolean {
+  try {
+    const h = new URL(url).hostname;
+    return h === "127.0.0.1" || h === "localhost" || h === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True when the browser will refuse this socket: plain ws:// from an HTTPS
+ * page. Loopback (127.0.0.1 / localhost) is exempt — browsers treat it as a
+ * trustworthy origin, so the hosted app can dial an agent on the same phone
+ * with no certificate and no internet.
+ */
+export function isBlockedWs(url: string): boolean {
+  return isSecurePage() && url.startsWith("ws://") && !isLoopbackUrl(url);
+}
+
 /** Rewrite a ws:// URL to wss:// (no-op when already secure or empty). */
 export function toSecureUrl(url: string): string {
   return url.startsWith("ws://") ? `wss://${url.slice("ws://".length)}` : url;
@@ -87,6 +109,13 @@ export function defaultEndpoints(target = DEFAULT_TARGET): BridgeEndpoint[] {
   const scheme = socketScheme();
   const pc = pageHost();
   const list: BridgeEndpoint[] = [
+    {
+      id: "local",
+      kind: "phone",
+      label: "This phone (offline · 127.0.0.1)",
+      url: LOCAL_AGENT_URL,
+      enabled: true,
+    },
     {
       id: "phone",
       kind: "phone",
@@ -146,13 +175,18 @@ function sanitize(list: BridgeEndpoint[], target: string): BridgeEndpoint[] {
     }
     return e;
   });
+  // Older saved lists predate the offline loopback agent — put it first.
+  if (!cleaned.some((e) => e.id === "local")) {
+    const local = defaultEndpoints(target).find((d) => d.id === "local");
+    if (local) cleaned.unshift(local);
+  }
   // A stored config where every usable endpoint is switched off is a dead end
   // ("no bridge endpoint is enabled"). Re-arm anything the page is allowed to
   // dial before giving up on the stored list.
   if (!cleaned.some((e) => e.enabled && e.url)) {
     const scheme = socketScheme();
     const armed = cleaned.map((e) =>
-      e.url && e.url.startsWith(`${scheme}://`) ? { ...e, enabled: true } : e,
+      e.url && (e.url.startsWith(`${scheme}://`) || isLoopbackUrl(e.url)) ? { ...e, enabled: true } : e,
     );
     if (armed.some((e) => e.enabled && e.url)) return armed;
     return defaultEndpoints(target);
@@ -172,6 +206,28 @@ export function loadEndpoints(): BridgeEndpoint[] {
   } catch {
     return defaultEndpoints(target);
   }
+}
+
+/**
+ * One-tap pairing from the phone installer: it opens /bridge#pair=<token>.
+ * The token lives in the URL fragment, which is never sent to any server.
+ * Returns the updated list, or null when there is no pairing fragment.
+ */
+export function consumePairingLink(current: BridgeEndpoint[]): BridgeEndpoint[] | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const token = params.get("pair");
+  if (!token || !/^[A-Za-z0-9_-]{8,128}$/.test(token)) return null;
+  const port = Number(params.get("port")) || AGENT_PORT;
+  const url = `ws://127.0.0.1:${port}/adb`;
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  const rest = current.filter((e) => e.id !== "local");
+  const next: BridgeEndpoint[] = [
+    { id: "local", kind: "phone", label: "This phone (offline · 127.0.0.1)", url, enabled: true, token },
+    ...rest,
+  ];
+  saveEndpoints(next);
+  return next;
 }
 
 export function saveEndpoints(endpoints: BridgeEndpoint[]) {

@@ -23,6 +23,7 @@ import { Route as BridgeRouteImport } from './routes/bridge'
 import { Route as BriefingRouteImport } from './routes/briefing'
 import { Route as BuildsRouteImport } from './routes/builds'
 import { Route as CbRouteImport } from './routes/cb'
+import { Route as CbSplashRouteImport } from './routes/cb-splash'
 import { Route as CbWelcomeRouteImport } from './routes/cb-welcome'
 import { Route as ContentRouteImport } from './routes/content'
 import { Route as DiagRouteImport } from './routes/diag'
@@ -35,6 +36,7 @@ import { Route as ForecastRouteImport } from './routes/forecast'
 import { Route as HardwareRouteImport } from './routes/hardware'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MapRouteImport } from './routes/map'
+import { Route as MeshSplashRouteImport } from './routes/mesh-splash'
 import { Route as NavRouteImport } from './routes/nav'
 import { Route as NetchatRouteImport } from './routes/netchat'
 import { Route as ObserveRouteImport } from './routes/observe'
@@ -137,6 +139,11 @@ const CbRoute = CbRouteImport.update({
   path: '/cb',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CbSplashRoute = CbSplashRouteImport.update({
+  id: '/cb-splash',
+  path: '/cb-splash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CbWelcomeRoute = CbWelcomeRouteImport.update({
   id: '/cb-welcome',
   path: '/cb-welcome',
@@ -195,6 +202,11 @@ const InventoryRoute = InventoryRouteImport.update({
 const MapRoute = MapRouteImport.update({
   id: '/map',
   path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeshSplashRoute = MeshSplashRouteImport.update({
+  id: '/mesh-splash',
+  path: '/mesh-splash',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NavRoute = NavRouteImport.update({
@@ -369,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/briefing': typeof BriefingRoute
   '/builds': typeof BuildsRoute
   '/cb': typeof CbRoute
+  '/cb-splash': typeof CbSplashRoute
   '/cb-welcome': typeof CbWelcomeRoute
   '/content': typeof ContentRoute
   '/diag': typeof DiagRoute
@@ -381,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/hardware': typeof HardwareRoute
   '/inventory': typeof InventoryRoute
   '/map': typeof MapRoute
+  '/mesh-splash': typeof MeshSplashRoute
   '/nav': typeof NavRoute
   '/netchat': typeof NetchatRoute
   '/observe': typeof ObserveRoute
@@ -428,6 +442,7 @@ export interface FileRoutesByTo {
   '/briefing': typeof BriefingRoute
   '/builds': typeof BuildsRoute
   '/cb': typeof CbRoute
+  '/cb-splash': typeof CbSplashRoute
   '/cb-welcome': typeof CbWelcomeRoute
   '/content': typeof ContentRoute
   '/diag': typeof DiagRoute
@@ -440,6 +455,7 @@ export interface FileRoutesByTo {
   '/hardware': typeof HardwareRoute
   '/inventory': typeof InventoryRoute
   '/map': typeof MapRoute
+  '/mesh-splash': typeof MeshSplashRoute
   '/nav': typeof NavRoute
   '/netchat': typeof NetchatRoute
   '/observe': typeof ObserveRoute
@@ -488,6 +504,7 @@ export interface FileRoutesById {
   '/briefing': typeof BriefingRoute
   '/builds': typeof BuildsRoute
   '/cb': typeof CbRoute
+  '/cb-splash': typeof CbSplashRoute
   '/cb-welcome': typeof CbWelcomeRoute
   '/content': typeof ContentRoute
   '/diag': typeof DiagRoute
@@ -500,6 +517,7 @@ export interface FileRoutesById {
   '/hardware': typeof HardwareRoute
   '/inventory': typeof InventoryRoute
   '/map': typeof MapRoute
+  '/mesh-splash': typeof MeshSplashRoute
   '/nav': typeof NavRoute
   '/netchat': typeof NetchatRoute
   '/observe': typeof ObserveRoute
@@ -549,6 +567,7 @@ export interface FileRouteTypes {
     | '/briefing'
     | '/builds'
     | '/cb'
+    | '/cb-splash'
     | '/cb-welcome'
     | '/content'
     | '/diag'
@@ -561,6 +580,7 @@ export interface FileRouteTypes {
     | '/hardware'
     | '/inventory'
     | '/map'
+    | '/mesh-splash'
     | '/nav'
     | '/netchat'
     | '/observe'
@@ -608,6 +628,7 @@ export interface FileRouteTypes {
     | '/briefing'
     | '/builds'
     | '/cb'
+    | '/cb-splash'
     | '/cb-welcome'
     | '/content'
     | '/diag'
@@ -620,6 +641,7 @@ export interface FileRouteTypes {
     | '/hardware'
     | '/inventory'
     | '/map'
+    | '/mesh-splash'
     | '/nav'
     | '/netchat'
     | '/observe'
@@ -667,6 +689,7 @@ export interface FileRouteTypes {
     | '/briefing'
     | '/builds'
     | '/cb'
+    | '/cb-splash'
     | '/cb-welcome'
     | '/content'
     | '/diag'
@@ -679,6 +702,7 @@ export interface FileRouteTypes {
     | '/hardware'
     | '/inventory'
     | '/map'
+    | '/mesh-splash'
     | '/nav'
     | '/netchat'
     | '/observe'
@@ -727,6 +751,7 @@ export interface RootRouteChildren {
   BriefingRoute: typeof BriefingRoute
   BuildsRoute: typeof BuildsRoute
   CbRoute: typeof CbRoute
+  CbSplashRoute: typeof CbSplashRoute
   CbWelcomeRoute: typeof CbWelcomeRoute
   ContentRoute: typeof ContentRoute
   DiagRoute: typeof DiagRoute
@@ -739,6 +764,7 @@ export interface RootRouteChildren {
   HardwareRoute: typeof HardwareRoute
   InventoryRoute: typeof InventoryRoute
   MapRoute: typeof MapRoute
+  MeshSplashRoute: typeof MeshSplashRoute
   NavRoute: typeof NavRoute
   NetchatRoute: typeof NetchatRoute
   ObserveRoute: typeof ObserveRoute
@@ -872,6 +898,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CbRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cb-splash': {
+      id: '/cb-splash'
+      path: '/cb-splash'
+      fullPath: '/cb-splash'
+      preLoaderRoute: typeof CbSplashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cb-welcome': {
       id: '/cb-welcome'
       path: '/cb-welcome'
@@ -954,6 +987,13 @@ declare module '@tanstack/react-router' {
       path: '/map'
       fullPath: '/map'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mesh-splash': {
+      id: '/mesh-splash'
+      path: '/mesh-splash'
+      fullPath: '/mesh-splash'
+      preLoaderRoute: typeof MeshSplashRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nav': {
@@ -1191,6 +1231,7 @@ const rootRouteChildren: RootRouteChildren = {
   BriefingRoute: BriefingRoute,
   BuildsRoute: BuildsRoute,
   CbRoute: CbRoute,
+  CbSplashRoute: CbSplashRoute,
   CbWelcomeRoute: CbWelcomeRoute,
   ContentRoute: ContentRoute,
   DiagRoute: DiagRoute,
@@ -1203,6 +1244,7 @@ const rootRouteChildren: RootRouteChildren = {
   HardwareRoute: HardwareRoute,
   InventoryRoute: InventoryRoute,
   MapRoute: MapRoute,
+  MeshSplashRoute: MeshSplashRoute,
   NavRoute: NavRoute,
   NetchatRoute: NetchatRoute,
   ObserveRoute: ObserveRoute,

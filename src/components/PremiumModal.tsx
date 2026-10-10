@@ -1,24 +1,32 @@
 import { Link } from "@tanstack/react-router";
 import type { SubscriptionTier } from "@/services/forecastApi";
 
-const TIERS: { id: SubscriptionTier; label: string; price: string; perks: string[] }[] = [
+// Mirrors docs/PRICING.md weather ladder. Every licence except Gorilla Grow carries
+// the 90-day aggregate sensor study; Gorilla Grow is study-exempt.
+const TIERS: { id: SubscriptionTier | "greenhouse"; label: string; price: string; perks: string[] }[] = [
   {
     id: "free",
-    label: "Free",
+    label: "Free Research Study",
     price: "$0",
-    perks: ["7-day forecast", "1 location"],
+    perks: ["basic daily view", "3/6/9-day ground checks", "90-day aggregate study"],
   },
   {
     id: "pro",
-    label: "Pro",
-    price: "$12/mo",
-    perks: ["62-day forecast", "5 saved locations", "custom weather alerts"],
+    label: "Weather Standard",
+    price: "$9.99 once",
+    perks: ["full Doppler", "almanac + lunar planting", "90-day study, then off the licence"],
+  },
+  {
+    id: "greenhouse",
+    label: "Greenhouse Edition",
+    price: "$49.99 once",
+    perks: ["Weather Standard", "80-ch CB on 6 handsets", "90-day study, then off the licence"],
   },
   {
     id: "enterprise",
-    label: "Enterprise",
-    price: "Contact sales",
-    perks: ["API access", "batch forecasts", "priority support"],
+    label: "Gorilla Grow Kit",
+    price: "$199 once · $29.99/mo",
+    perks: ["full CB + Shield dash + Doppler", "notes + snapshots", "no study participation"],
   },
 ];
 

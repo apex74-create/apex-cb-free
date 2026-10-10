@@ -65,12 +65,6 @@ function ProductPage() {
         >
           ‹ Store
         </Link>
-        <Link
-          to="/inventory"
-          className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-signal"
-        >
-          Inventory
-        </Link>
       </div>
 
       <section className="mx-auto mt-2 w-full max-w-3xl rounded-sm border border-signal/40 bg-card/60 p-4 sm:p-6">

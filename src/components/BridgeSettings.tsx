@@ -10,6 +10,7 @@ import {
   saveEndpoints,
   saveTarget,
   toSecureUrl,
+  isBlockedWs,
   type BridgeEndpoint,
   type LinkState,
 } from "@/lib/bridge";
@@ -260,9 +261,7 @@ export default function BridgeSettings({
               aria-label={`${endpoint.label} socket URL`}
               className="mt-1.5 w-full rounded-sm border border-border bg-card px-1.5 py-1 text-[9px] text-foreground outline-none focus:border-signal"
             />
-            {typeof window !== "undefined" &&
-            window.location.protocol === "https:" &&
-            endpoint.url.startsWith("ws://") ? (
+            {isBlockedWs(endpoint.url) ? (
               <div className="mt-1 flex items-center justify-between gap-2">
                 <p className="text-[7px] uppercase text-alert">blocked on HTTPS · needs wss://</p>
                 <button

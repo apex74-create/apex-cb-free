@@ -7,6 +7,10 @@ import {
   FARM_AG,
   OPERATOR_KITS,
   OPERATOR_RULES,
+  MESH_USE_LADDER,
+  MESH_USE_RULES,
+  GREENHOUSE_COMMERCIAL,
+  type UseRung,
   amountLabel,
   type CbTier,
   type AddOn,
@@ -18,7 +22,9 @@ import {
   DATA_PROMISE_SUMMARY,
   DATA_PROMISE_POINTS,
 } from "@/lib/data-promise";
+import { Button } from "@/components/ui/button";
 import PlanBuyButton from "@/components/PlanBuyButton";
+import { OPERATOR_BRIDGE_COPY } from "@/lib/operator-bridge-copy";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -28,13 +34,13 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "CB ladder from free to Site Pro, priced by handset count. Per-handset add-ons for weather, maps, Shield and squad positioning. Named field editions and a contract-only Operator tier.",
+          "Proposed CB prices from free to Site Pro, with active-handset monthly examples. Draft add-ons and editions are not yet for sale; operator kits require a contract.",
       },
       { property: "og:title", content: "Pricing — Apex CB & Field Kit" },
       {
         property: "og:description",
         content:
-          "Free three-handset CB with research licence, up through Site Pro with the 270-channel recursive scanner. Add-ons per handset. Operator / pen-test tier by contract.",
+          "Free public CB and limited weather, plus proposed pair, family, crew and site prices. Paid CB offers await verified delivery; operator kits require a contract.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -46,6 +52,8 @@ const TABS = [
   { id: "ladder", label: "CB ladder" },
   { id: "addons", label: "Add-ons" },
   { id: "editions", label: "Named editions" },
+  { id: "mesh", label: "Cast Net Mesh" },
+  { id: "greenhouse", label: "Greenhouse commercial" },
   { id: "farm", label: "Farm Ag" },
   { id: "operator", label: "Operator / Pen-test" },
 ] as const;
@@ -104,17 +112,24 @@ function CbTierCard({ tier }: { tier: CbTier }) {
         ))}
       </ul>
 
-      <PlanBuyButton
-        priceId={tier.contact ? null : tier.priceId}
-        productSlug={tier.licenceSlug}
-        label={
-          tier.amountUsd === 0
-            ? "Start free"
-            : tier.period === "once"
-              ? `Buy ${amountLabel(tier)}`
-              : `Start ${amountLabel(tier)}`
-        }
-      />
+      {tier.amountUsd === 0 ? (
+        <Button asChild variant="outline"><Link to="/cb">Open free CB</Link></Button>
+      ) : tier.priceId ? (
+        <PlanBuyButton
+          priceId={tier.priceId}
+          productSlug={tier.licenceSlug}
+          label={`Buy ${tier.name}`}
+        />
+      ) : (
+        <p className="text-[10px] font-bold uppercase text-scan">Proposed price · not available to buy yet</p>
+      )}
+      <p className="text-[10px] leading-relaxed text-muted-foreground">
+        {tier.amountUsd === 0
+          ? "Public CB and limited weather where supported; aggregate research contribution is disclosed in the agreement."
+          : tier.priceId
+            ? "Card checkout in test mode until go-live completes; licence delivery follows payment verification."
+            : "Existing purchasers keep their paid terms. This proposal does not activate checkout or a new licence."}
+      </p>
     </div>
   );
 }
@@ -130,6 +145,7 @@ function AddOnCard({ addon }: { addon: AddOn }) {
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">{addon.summary}</p>
       <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{addon.unit}</p>
+      <p className="text-[9px] uppercase text-scan">Draft · unavailable to buy</p>
     </div>
   );
 }
@@ -153,11 +169,27 @@ function EditionCard({ edition }: { edition: NamedEdition }) {
           </li>
         ))}
       </ul>
-      <PlanBuyButton
-        priceId={edition.contact ? null : edition.priceId}
-        productSlug={edition.licenceSlug}
-        label={edition.contact ? "Talk to us" : "Buy edition"}
-      />
+      <p className="text-[10px] font-bold uppercase text-scan">Draft · not available to buy yet</p>
+    </div>
+  );
+}
+
+function UseRungCard({ rung }: { rung: UseRung }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-sm border border-border/60 bg-card/40 p-5">
+      <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground">{rung.name}</h3>
+      <p className="text-xs leading-relaxed text-muted-foreground">{rung.who}</p>
+      <p className="text-lg font-bold tabular-nums text-foreground">{rung.priceLabel}</p>
+      <ul className="flex flex-1 flex-col gap-2">
+        {rung.includes.map((line) => (
+          <li key={line} className="flex gap-2 text-xs leading-relaxed text-muted-foreground"><span className="text-signal">·</span><span>{line}</span></li>
+        ))}
+      </ul>
+      {rung.contact ? (
+        <a href={`mailto:operator@apexairsolutions.com?subject=${encodeURIComponent(`${rung.name} — enquiry`)}`} className="rounded-sm border border-signal/60 px-4 py-2 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-signal hover:bg-signal/10">Contact us</a>
+      ) : rung.priceId ? (
+        <PlanBuyButton priceId={rung.priceId} productSlug={rung.licenceSlug} label={`Buy ${rung.name}`} />
+      ) : null}
     </div>
   );
 }
@@ -206,9 +238,9 @@ function PricingPage() {
           Price follows how many handsets you're putting on the network.
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          The CB ladder below is the base. Add-ons attach per handset, so Judy's walkie-talkie
-          doesn't pay for weather she'll never use. Named editions bundle common setups. The
-          Operator tier is contract-only.
+          Free CB and limited weather remain available where supported. These US-dollar prices
+          are proposals before applicable tax; paid CB tiers, add-ons and editions are not
+          available to buy yet. Operator kits require an agreement.
         </p>
       </header>
 
@@ -237,18 +269,19 @@ function PricingPage() {
 
       <div className="mb-6 flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <button
+          <Button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-sm border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
+            variant="outline"
+            className={`rounded-sm px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${
               tab === t.id
                 ? "border-signal/60 bg-signal/10 text-signal"
                 : "border-border/60 text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -260,10 +293,13 @@ function PricingPage() {
             ))}
           </div>
           <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">Scanner tier is a real differentiator.</strong>{" "}
-            80 channels on a basic tier is not the same as 80 channels with the recursive stack
-            scanner sweeping 270 at a time and reporting hits up the chain instantly. That's what
-            lets a foreman stay on top of a whole crew without missing a key-up.
+            <strong className="text-foreground">Managed-site example.</strong>{" "}
+            Job Site is proposed at $29/month plus $2 per distinct active handset per month:
+            30 active handsets would total $89/month. Site Pro at $99/month plus $2 each
+            would total $299/month for 100. A device counts once per billing period, even
+            after reconnecting, up to the tier cap. This counting rule is not live yet.
+            For reference, Zello Work at roughly $8/user/month is $240 for 30;
+            this does not establish equivalent service or offline coverage.
           </p>
         </>
       ) : null}
@@ -271,8 +307,8 @@ function PricingPage() {
       {tab === "addons" ? (
         <>
           <p className="mb-4 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-            Final price = base tier + add-ons × handsets. Any handset can skip an add-on it
-            doesn't need, and upgrades can be bought per handset later.
+            Draft per-handset, one-time prices. These upgrades require verified device entitlements
+            before they can be purchased. They do not change the free CB and weather offer.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {ADD_ONS.map((addon) => (
@@ -285,8 +321,8 @@ function PricingPage() {
             </h3>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
               Base set + Routing Shield + Squad positioning + Signal Shield on every handset.
-              One price, sized by handset count. The "hot neighborhood watch / paintball field"
-              kit — no edge routers, no mesh hardware, just phones.
+              A proposed bundle sized by handset count. Routing and positioning require
+              native verification before an offer is available.
             </p>
           </div>
         </>
@@ -298,6 +334,26 @@ function PricingPage() {
             <EditionCard key={edition.id} edition={edition} />
           ))}
         </div>
+      ) : null}
+
+      {tab === "mesh" ? (
+        <>
+          <ul className="mb-5 grid max-w-3xl gap-2 sm:grid-cols-2">
+            {MESH_USE_RULES.map((r) => <li key={r} className="flex gap-2 text-xs leading-relaxed text-muted-foreground"><span className="text-signal">·</span><span>{r}</span></li>)}
+          </ul>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {MESH_USE_LADDER.map((r) => <UseRungCard key={r.id} rung={r} />)}
+          </div>
+        </>
+      ) : null}
+
+      {tab === "greenhouse" ? (
+        <>
+          <p className="mb-4 max-w-3xl text-xs leading-relaxed text-muted-foreground">Home growers stay on Weather Standard, Greenhouse Edition or Gorilla Grow. Commercial houses scale by site and by device. The 90-day aggregate study applies to every rung except Gorilla Grow and Grower Enterprise.</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {GREENHOUSE_COMMERCIAL.map((r) => <UseRungCard key={r.id} rung={r} />)}
+          </div>
+        </>
       ) : null}
 
       {tab === "farm" ? (
@@ -342,9 +398,8 @@ function PricingPage() {
             </div>
           </div>
           <p className="mt-5 text-[11px] leading-relaxed text-muted-foreground">
-            Miss your window and the advanced tools pause until the next report lands. No ads —
-            the report itself is the payment. Every report feeds the sensor array under the same
-            research terms as the free CB tier.
+            These report cycles and unlocks are proposals, not an active renewal rule.
+            Observations stay review evidence and do not silently change a forecast.
           </p>
         </div>
       ) : null}
@@ -375,6 +430,9 @@ function PricingPage() {
               <OperatorCard key={kit.id} kit={kit} />
             ))}
           </div>
+          <p className="mt-4 border-l-2 border-signal/60 pl-3 text-xs leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Operator bridge · </strong>{OPERATOR_BRIDGE_COPY}
+          </p>
           <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground">
             Comparable tooling: Burp Suite Pro around $475 a year, Cobalt Strike around $3,500
             per user a year, Kali is free. The pricing above reflects what a licensed operator
@@ -384,8 +442,8 @@ function PricingPage() {
       ) : null}
 
       <p className="mt-10 max-w-3xl text-xs leading-relaxed text-muted-foreground">
-        Early buyers keep the price they paid: prices go up as the network grows. Prices are in
-        US dollars; card payment runs in test mode until the merchant account is verified.
+        Existing buyers keep their paid terms. Proposed prices are in US dollars before
+        applicable tax; no checkout is active for the CB offers shown here.
       </p>
     </main>
   );

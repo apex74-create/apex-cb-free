@@ -11,6 +11,8 @@ export type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+import { recordConfirmedFreeInstall } from "@/lib/free-install-count";
+
 let latched: InstallPromptEvent | null = null;
 const listeners = new Set<(e: InstallPromptEvent | null) => void>();
 
@@ -34,6 +36,7 @@ if (typeof window !== "undefined") {
       latched = null;
       w.__apexInstallEvent = undefined;
       emit();
+      void recordConfirmedFreeInstall();
     });
   }
 }

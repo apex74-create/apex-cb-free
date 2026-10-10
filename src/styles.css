@@ -86,6 +86,12 @@
   --warn: oklch(0.88 0.22 85);
   --alert: oklch(0.72 0.29 20);
   --scan: oklch(0.85 0.2 210);
+  --rim-red: oklch(0.68 0.24 22);
+  --rim-orange: oklch(0.79 0.18 55);
+  --rim-yellow: oklch(0.91 0.18 95);
+  --rim-green: oklch(0.82 0.2 155);
+  --rim-cyan: oklch(0.82 0.15 210);
+  --rim-violet: oklch(0.69 0.2 300);
 }
 
 @layer base {
@@ -98,6 +104,7 @@
     height: 100%;
   }
 
+  html { overscroll-behavior: none; }
   body {
     background-color: var(--color-background);
     color: var(--color-signal);
@@ -197,6 +204,22 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
+}
+
+.watch-landing-faceswap {
+  position: absolute;
+  z-index: 3;
+  right: 4%;
+  bottom: calc(4% + 36px);
+  padding: 2px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-background);
+  color: var(--color-warn, #ffb000);
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
 }
 
 .watch-landing-actions a,
@@ -344,7 +367,7 @@
 
 
 /* Leaflet dark tuning */
-.leaflet-container {
+.leaflet-container.leaflet-container {
   background: #05100b;
   font-family: var(--font-mono);
 }
@@ -354,6 +377,9 @@
 /* Dark remains dark; satellite is slightly dimmed so OLED overlays stay legible. */
 .apex-map-dark .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.62) contrast(1.28) saturate(0.55);
+}
+.apex-map-osm .leaflet-tile-pane {
+  filter: brightness(0.85) contrast(1.05);
 }
 .apex-map-sat .leaflet-tile-pane {
   filter: brightness(0.72) contrast(1.18) saturate(0.82);
@@ -676,6 +702,11 @@ a.rounded-md[class*="border"] {
   background-color: var(--background);
 }
 .cb-map-host .leaflet-overlay-pane svg { background: transparent; }
+.cb-squad-pin-wrap { background: transparent; border: 0; }
+.cb-squad-pin { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--pin-color); border-radius: 50%; background: var(--background); color: var(--pin-color); font: 700 10px/1 var(--font-mono); box-shadow: 0 0 7px var(--pin-color); }
+.cb-map-host .cb-tx-spoke-in, .cb-map-host .cb-tx-spoke-out { stroke-dasharray: 10 8; stroke-linecap: butt; animation: cb-tx-flow 0.7s linear infinite; }
+@keyframes cb-tx-flow { to { stroke-dashoffset: -18; } }
+@media (prefers-reduced-motion: reduce) { .cb-map-host .cb-tx-spoke-in, .cb-map-host .cb-tx-spoke-out { animation: none; } }
 .cb-map-host .leaflet-popup-content-wrapper,
 .cb-map-host .leaflet-popup-tip,
 .cb-map-host .leaflet-tooltip {
@@ -701,11 +732,16 @@ a.rounded-md[class*="border"] {
   position: relative;
   border: 3px solid var(--warn);
   border-radius: 1rem;
+  /* --screen-glow: the LED under-light reflects the screen's own colour up
+     onto the surface below — not the bezel accent, not white. Skins set it
+     to their face's dominant tone; it falls back to the accent. */
+  --screen-glow: var(--warn);
   box-shadow:
     inset 0 0 0 2px var(--background),
     inset 0 0 0 4px var(--border),
     inset 0 0 24px color-mix(in oklab, var(--warn) 25%, transparent),
-    0 7px 18px color-mix(in oklab, var(--warn) 14%, transparent);
+    0 10px 34px -4px color-mix(in oklab, var(--screen-glow) 10%, transparent),
+    0 3px 12px -2px color-mix(in oklab, var(--screen-glow) 16%, transparent);
 }
 /* Chassis chrome — the black radio shell the amber bezel sits on. The app
    header and the knob shelf ride on it so light browser chrome never shows
@@ -729,21 +765,125 @@ a.rounded-md[class*="border"] {
   background: repeating-linear-gradient(90deg, oklch(0.34 0.02 75) 0 2px, oklch(0.14 0.01 75) 2px 4px);
   box-shadow: inset 0 -1px 2px oklch(0 0 0 / 50%);
 }
+.cb-bezel::before {
+  content: "";
+  position: absolute;
+  z-index: 31;
+  inset: 3px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(135deg,
+    transparent 35%,
+    color-mix(in oklab, var(--rim-red) 7%, transparent) 41%,
+    color-mix(in oklab, var(--rim-orange) 13%, transparent) 45%,
+    color-mix(in oklab, var(--rim-yellow) 17%, transparent) 48%,
+    color-mix(in oklab, var(--rim-green) 16%, transparent) 51%,
+    color-mix(in oklab, var(--rim-cyan) 14%, transparent) 54%,
+    color-mix(in oklab, var(--rim-violet) 9%, transparent) 58%,
+    transparent 65%);
+  background-size: 260% 260%;
+  animation: cb-screen-flash 8s linear infinite;
+}
 .cb-bezel::after {
   content: "";
   position: absolute;
-  z-index: 20;
-  inset: 1px;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
   pointer-events: none;
-  border-radius: inherit;
-  border: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
-  background: linear-gradient(115deg, transparent 0%, transparent 43%, color-mix(in oklab, var(--warn) 25%, transparent) 50%, transparent 57%, transparent 100%);
-  background-size: 300% 100%;
-  animation: cb-edge-glint 9s ease-in-out infinite;
+  border-radius: 2px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--rim-red) 43%, var(--rim-yellow) 48%, var(--rim-green) 51%, var(--rim-cyan) 54%, var(--rim-violet) 57%, transparent 100%);
+  background-size: 35% 100%;
+  background-repeat: no-repeat;
+  animation: cb-rim-top 8s linear infinite;
 }
-@keyframes cb-edge-glint {
-  0%, 76%, 100% { background-position: 100% 0; }
-  88% { background-position: 0 0; }
+.cb-rim-chase {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--rim-red) 40%, var(--rim-yellow) 46%, var(--rim-green) 50%, var(--rim-cyan) 54%, var(--rim-violet) 60%, transparent);
+  background-repeat: no-repeat;
+  border-radius: 2px;
+}
+.cb-rim-left, .cb-rim-right {
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-size: 100% 25%;
+  background-image: linear-gradient(180deg, transparent, var(--rim-red) 40%, var(--rim-yellow) 46%, var(--rim-green) 50%, var(--rim-cyan) 54%, var(--rim-violet) 60%, transparent);
+}
+.cb-rim-left { left: 0; animation: cb-rim-left 8s linear infinite; }
+.cb-rim-right { right: 0; animation: cb-rim-right 8s linear infinite; }
+.cb-rim-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-size: 35% 100%;
+  animation: cb-rim-bottom 8s linear infinite;
+}
+/* Base scrolls the radio content independently; the light must follow the
+   stationary outer chassis, not the height/scroll position of that content. */
+.cb-layout-base > .cb-bezel > .cb-rim-chase { display: none; }
+.cb-base-rim {
+  position: absolute;
+  inset: 4px;
+  z-index: 32;
+  pointer-events: none;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+@keyframes cb-rim-top {
+  0%, 2% { opacity: 0; background-position: 150% 0; }
+  3% { opacity: .28; }
+  14% { opacity: .28; }
+  16%, 100% { opacity: 0; background-position: -50% 0; }
+}
+@keyframes cb-rim-left {
+  0%, 14% { opacity: 0; background-position: 0 -35%; }
+  16% { opacity: .28; }
+  29% { opacity: .28; }
+  31%, 100% { opacity: 0; background-position: 0 135%; }
+}
+@keyframes cb-rim-bottom {
+  0%, 51% { opacity: 0; background-position: -50% 0; }
+  53% { opacity: .28; }
+  64% { opacity: .28; }
+  66%, 100% { opacity: 0; background-position: 150% 0; }
+}
+@keyframes cb-rim-right {
+  0%, 64% { opacity: 0; background-position: 0 135%; }
+  66% { opacity: .28; }
+  79% { opacity: .28; }
+  81%, 100% { opacity: 0; background-position: 0 -35%; }
+}
+@keyframes cb-screen-flash {
+  0%, 30% { opacity: 0; background-position: 100% 100%; }
+  32% { opacity: 1; }
+  45% { opacity: 1; }
+  48%, 100% { opacity: 0; background-position: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cb-bezel::before, .cb-bezel::after, .cb-rim-chase, .gyro-flash { animation: none; opacity: 0; }
+}
+/* Apex frame — the CB chassis worn by Watch, Weather and Mesh screens. */
+.apex-bezel.cb-bezel {
+  --warn: oklch(0.78 0.16 62);
+  --border: oklch(0.8 0.16 75 / 45%);
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  border-width: 4px;
+  border-radius: 1.1rem;
+}
+.apex-skin body { border-radius: 1.1rem; }
+.apex-skin :is(button, a.border, input, textarea, select, section, article, aside, .border, .border-2, .border-\[3px\], .rounded-none, .rounded-sm) {
+  border-radius: 0.7rem;
 }
 .cb-deck :is(button, textarea, input, .border, .border-2, .border-\[3px\]) {
   border-radius: max(0.4rem, var(--radius));
@@ -754,16 +894,57 @@ a.rounded-md[class*="border"] {
 .cb-channel-display {
   box-shadow: inset 0 0 0 2px var(--border), inset 0 0 18px color-mix(in oklab, var(--warn) 12%, transparent), 0 4px 9px color-mix(in oklab, var(--background) 35%, transparent);
 }
-.cb-channel-digits {
-  font-family: "Share Tech Mono", ui-monospace, monospace;
-  font-size: 76px;
-  line-height: 1;
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 10px color-mix(in oklab, var(--warn) 35%, transparent);
+.cb-led-readout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(2px, 2%, 10px);
+  width: 100%;
+  min-width: 0;
+  height: 96px;
+  padding: 7px 0;
 }
-@media (min-width: 640px) { .cb-channel-digits { font-size: 112px; } }
-@media (max-width: 350px) { .cb-channel-digits { font-size: 60px; } }
+.cb-led-digit {
+  position: relative;
+  display: block;
+  flex: 0 1 55px;
+  width: min(25%, 55px);
+  min-width: 0;
+  height: 78px;
+  background: color-mix(in oklab, var(--warn) 5%, transparent);
+  border: 1px solid color-mix(in oklab, var(--warn) 20%, transparent);
+  border-radius: 2px;
+  box-shadow: inset 0 0 5px color-mix(in oklab, var(--background) 60%, transparent);
+}
+.cb-led-segment {
+  position: absolute;
+  display: block;
+  background: color-mix(in oklab, var(--warn) 9%, transparent);
+  clip-path: polygon(16% 0, 84% 0, 100% 50%, 84% 100%, 16% 100%, 0 50%);
+}
+.cb-led-on { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+.cb-led-a, .cb-led-g, .cb-led-d { left: 19%; width: 62%; height: 10%; }
+.cb-led-a { top: 5%; }
+.cb-led-g { top: 45%; }
+.cb-led-d { bottom: 5%; }
+.cb-led-b, .cb-led-c, .cb-led-e, .cb-led-f { width: 14%; height: 38%; clip-path: polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%); }
+.cb-led-b, .cb-led-c { right: 7%; }
+.cb-led-e, .cb-led-f { left: 7%; }
+.cb-led-b, .cb-led-f { top: 9%; }
+.cb-led-c, .cb-led-e { bottom: 9%; }
+@media (max-width: 350px) {
+  .cb-led-readout { height: 78px; }
+  .cb-led-digit { height: 62px; }
+}
+.cb-history-dock { position: relative; }
+.cb-history-peek {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 3px 7px color-mix(in oklab, var(--background) 75%, transparent);
+}
+.cb-history-peek-grille { display: flex; flex-direction: column; gap: 3px; padding: 3px 4px; background: var(--grille); border: 1px solid var(--grille-line); border-radius: 4px; }
+.cb-history-peek-grille i { display: block; height: 3px; background: var(--grille-slot); border-top: 1px solid var(--grille-line); }
 .cb-grille {
   background: var(--grille);
   border-color: var(--grille-line);
@@ -784,7 +965,7 @@ a.rounded-md[class*="border"] {
 .cb-entry { min-height: 100dvh; }
 .cb-entry img { object-position: center; }
 @media (prefers-reduced-motion: reduce) {
-  .cb-bezel::after, .cb-grille-warning { animation: none; }
+  .cb-grille-warning { animation: none; }
 }
 .cb-scan-led {
   box-shadow: 0 0 9px var(--warn), 0 0 18px var(--warn);
@@ -795,3 +976,400 @@ a.rounded-md[class*="border"] {
 .cb-deck:not(.cb-day) .cb-map-tiles {
   filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.1);
 }
+
+/* Scoped venue-pitch skin; shared event behavior and other site pages stay untouched. */
+.vendor-mesh-skin {
+  --background: oklch(0.075 0.012 25);
+  --foreground: oklch(0.96 0.015 90);
+  --card: oklch(0.14 0.026 23);
+  --muted-foreground: oklch(0.76 0.025 80);
+  --border: oklch(0.76 0.11 60 / 35%);
+  --warn: oklch(0.85 0.2 85);
+  --scan: oklch(0.78 0.23 22);
+  --primary: oklch(0.78 0.23 22);
+  --primary-foreground: oklch(0.08 0.012 25);
+}
+.vendor-mesh-stage-shade {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--background) 50%, transparent), transparent 32%, color-mix(in oklab, var(--background) 90%, transparent) 100%);
+}
+.vendor-mesh-title { text-shadow: 0 4px 22px var(--background); }
+
+/* Z Stack edge tabs: translucent hint that rolls out to opaque on touch/hover. */
+.z-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  width: 22px; height: 132px; padding: 6px 0;
+  color: var(--warn); font-weight: 800; font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  background: color-mix(in oklab, var(--background) 35%, transparent);
+  border: 1.5px solid color-mix(in oklab, var(--warn) 70%, transparent);
+  backdrop-filter: blur(4px);
+  opacity: .55;
+  box-shadow: 0 0 14px -2px color-mix(in oklab, var(--warn) 55%, transparent);
+  transition: opacity .25s, width .25s, background .25s, box-shadow .25s;
+  animation: z-tab-breathe 2.6s ease-in-out infinite;
+}
+.z-tab-left { border-left: 0; border-radius: 0 10px 10px 0; }
+.z-tab-right { border-right: 0; border-radius: 10px 0 0 10px; }
+.z-tab:hover, .z-tab:focus-visible, .z-tab:active {
+  opacity: 1; width: 30px; animation: none;
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  box-shadow: 0 6px 22px -4px color-mix(in oklab, var(--foreground) 45%, transparent), 0 0 18px color-mix(in oklab, var(--warn) 70%, transparent);
+}
+.z-tab-chev { font-size: 16px; line-height: 1; }
+.z-tab-label { writing-mode: vertical-rl; }
+.z-tab-left .z-tab-label { transform: rotate(180deg); }
+@keyframes z-tab-breathe { 0%,100% { opacity: .45; } 50% { opacity: .85; } }
+
+/* Z Stack sheets: slide in with a depth shadow that settles as they land. */
+.z-sheet-left { animation: z-sheet-in-left .28s cubic-bezier(.2,.8,.2,1) both; box-shadow: 14px 0 28px -10px color-mix(in oklab, var(--foreground) 55%, transparent); }
+.z-sheet-right { animation: z-sheet-in-right .28s cubic-bezier(.2,.8,.2,1) both; box-shadow: -14px 0 28px -10px color-mix(in oklab, var(--foreground) 55%, transparent); }
+@keyframes z-sheet-in-left { from { transform: translateX(-100%); box-shadow: 40px 0 50px -10px color-mix(in oklab, var(--foreground) 70%, transparent); } }
+@keyframes z-sheet-in-right { from { transform: translateX(100%); box-shadow: -40px 0 50px -10px color-mix(in oklab, var(--foreground) 70%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .z-tab, .z-sheet-left, .z-sheet-right { animation: none; } .z-tab { opacity: .8; } }
+
+/* LED under-light + glossy reflection on Z tabs and sheet edges. */
+.z-tab { position: fixed; overflow: hidden; }
+.z-tab::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in oklab, var(--foreground) 22%, transparent), transparent 35%, transparent 70%, color-mix(in oklab, var(--warn) 25%, transparent)); pointer-events: none; }
+.z-tab-left { filter: drop-shadow(4px 0 6px color-mix(in oklab, var(--warn) 60%, transparent)); }
+.z-tab-right { filter: drop-shadow(-4px 0 6px color-mix(in oklab, var(--warn) 60%, transparent)); }
+/* Sheet undercast: a razor-thin OLED drop line right at the open edge, then a
+   soft screen-coloured fade underneath — reads as real depth between the
+   shelf and what's below it. */
+.z-sheet-left { box-shadow:
+  1px 0 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 85%, transparent),
+  3px 0 10px -2px color-mix(in oklab, var(--screen-glow, var(--warn)) 45%, transparent),
+  14px 0 34px -8px color-mix(in oklab, var(--screen-glow, var(--warn)) 18%, transparent),
+  14px 0 28px -10px color-mix(in oklab, var(--foreground) 45%, transparent); }
+.z-sheet-right { box-shadow:
+  -1px 0 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 85%, transparent),
+  -3px 0 10px -2px color-mix(in oklab, var(--screen-glow, var(--warn)) 45%, transparent),
+  -14px 0 34px -8px color-mix(in oklab, var(--screen-glow, var(--warn)) 18%, transparent),
+  -14px 0 28px -10px color-mix(in oklab, var(--foreground) 45%, transparent); }
+.z-sheet-up { box-shadow:
+  0 -1px 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 85%, transparent),
+  0 -3px 10px -2px color-mix(in oklab, var(--screen-glow, var(--warn)) 45%, transparent),
+  0 -14px 34px -8px color-mix(in oklab, var(--screen-glow, var(--warn)) 18%, transparent),
+  0 -14px 28px -10px color-mix(in oklab, var(--foreground) 45%, transparent); }
+
+/* Shared skeleton depth routine: framed surfaces inside a drawer receive a
+   screen-coloured lower LED fade and a fine opposite-edge reflection. It is
+   deliberately scoped to drawers, not every layout div or map tile. */
+.z-sheet { --shelf-edge: -1px; }
+.z-sheet-left { --shelf-edge: 1px; }
+.z-sheet-right { --shelf-edge: -1px; }
+.z-sheet :is(div, section, article, li):is(.border, .border-2) {
+  box-shadow:
+    inset var(--shelf-edge) 0 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 35%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 20%, transparent),
+    0 1px 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 58%, transparent),
+    0 5px 10px -3px color-mix(in oklab, var(--screen-glow, var(--warn)) 28%, transparent);
+}
+/* Controls are the next level down in the stack, so their rim is clearer
+   without turning the whole drawer into a glowing card. */
+.z-sheet :is(div, section, article, li):is(.border, .border-2) :is(button, [role="button"]),
+.z-sheet :is(div, section, article, li):is(.border, .border-2) :is(input, textarea, select) {
+  border-color: color-mix(in oklab, var(--screen-glow, var(--warn)) 68%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--screen-glow, var(--warn)) 36%, transparent);
+}
+.z-sheet :is(div, section, article, li):is(.border, .border-2) :is(button, [role="button"]):focus-visible,
+.z-sheet :is(div, section, article, li):is(.border, .border-2) :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--screen-glow, var(--warn));
+  outline-offset: 2px;
+}
+
+/* Auto landscape uses the full left map column and keeps the CB and history on the right. */
+@media (orientation: landscape) and (max-height: 640px), (orientation: landscape) and (min-width: 1024px) {
+  .cb-deck.cb-layout-auto > .cb-bezel {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-auto-rows: auto;
+    grid-template-rows: repeat(8, auto) minmax(0, 1fr);
+    overflow-y: auto;
+    height: 100%;
+  }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-chrome { grid-column: 1; grid-row: 1; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-knob-notch { grid-column: 2; grid-row: 1; justify-self: center; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-carrier-banner { grid-column: 1; grid-row: 2; }
+  .cb-deck.cb-layout-auto > .cb-bezel > :not(.cb-chrome):not(.cb-knob-notch):not(.cb-carrier-banner):not(.cb-shelf-grab):not(.cb-radio-shelf) { grid-column: 2; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-shelf-grab { display: none; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-radio-shelf { display: contents; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-radio-shelf > :not(.cb-map-section) { grid-column: 2; min-width: 0; }
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-radio-shelf > .cb-map-section {
+    grid-column: 1;
+    grid-row: 3 / -1;
+    margin-top: 0;
+    display: flex;
+    height: calc(100dvh - 0.5rem);
+    min-height: 0;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+  }
+  .cb-deck.cb-layout-auto .cb-map-section > .cb-map-viewport { min-height: 0; height: auto; flex: 1; }
+}
+/* Base station: always map left, full CB right, no matter the rotation. */
+
+/* Portrait handsets stack the CB in one column; split only when there is room. */
+@media (orientation: landscape), (min-width: 760px) {
+.cb-deck.cb-layout-base > .cb-bezel {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-auto-rows: auto;
+  grid-template-rows: repeat(8, auto) minmax(0, 1fr);
+  overflow-y: auto;
+  height: 100%;
+}
+/* Left column: header buttons + weather banner on top of the map. */
+.cb-deck.cb-layout-base > .cb-bezel > .cb-chrome { grid-column: 1; grid-row: 1; }
+.cb-deck.cb-layout-base > .cb-bezel > .cb-knob-notch { grid-column: 2; grid-row: 1; justify-self: center; }
+.cb-deck.cb-layout-base > .cb-bezel > .cb-carrier-banner { grid-column: 1; grid-row: 2; }
+/* Right column: the whole CB — status, channel console, talk paddle. */
+.cb-deck.cb-layout-base > .cb-bezel > :not(.cb-chrome):not(.cb-knob-notch):not(.cb-carrier-banner):not(.cb-shelf-grab):not(.cb-radio-shelf) { grid-column: 2; }
+.cb-deck.cb-layout-base > .cb-bezel > .cb-shelf-grab { display: none; }
+/* Shelf dissolves into the bezel grid: its children become grid items.
+   Map fills the left under the header/weather; text field, presets and
+   call history stack on the right under the talk paddle. */
+.cb-deck.cb-layout-base > .cb-bezel > .cb-radio-shelf { display: contents; }
+.cb-deck.cb-layout-base > .cb-bezel > .cb-radio-shelf > :not(.cb-map-section) { grid-column: 2; min-width: 0; }
+.cb-deck.cb-layout-base > .cb-bezel > .cb-radio-shelf > .cb-map-section {
+  grid-column: 1;
+  grid-row: 3 / -1;
+  margin-top: 0;
+  display: flex;
+  height: calc(100dvh - 0.5rem);
+  min-height: 0;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+}
+.cb-deck.cb-layout-base .cb-map-section > .cb-map-viewport { min-height: 0; height: auto; flex: 1; }
+}
+
+/* CB header buttons: always outlined; outline brightens and fill solidifies when actuated. */
+.cb-hbtn {
+  border: 1px solid color-mix(in oklab, var(--warn) 55%, transparent);
+  background-color: color-mix(in oklab, var(--background) 60%, transparent);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.cb-hbtn:active,
+.cb-hbtn[aria-pressed="true"] {
+  border-color: var(--warn);
+  background-color: color-mix(in oklab, var(--warn) 18%, var(--background));
+  box-shadow: 0 0 8px color-mix(in oklab, var(--warn) 45%, transparent);
+}
+
+/* Shared app top-bar buttons: same constant amber outline, brightens on actuation. */
+.app-hbtn {
+  border: 1px solid color-mix(in oklab, var(--warn) 55%, transparent);
+  background-color: color-mix(in oklab, var(--background) 60%, transparent);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+.app-hbtn:active,
+.app-hbtn[aria-pressed="true"] {
+  border-color: var(--warn);
+  background-color: color-mix(in oklab, var(--warn) 18%, var(--background));
+  box-shadow: 0 0 8px color-mix(in oklab, var(--warn) 45%, transparent);
+}
+
+/* Venue/floor builder: landscape (Base-style) — floor canvas left, tools right. */
+.vb-main {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 900px) and (orientation: landscape) {
+  .vb-main {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+  .vb-main .vb-floor {
+    order: -1;
+  }
+  .vb-main .vb-tools {
+    position: sticky;
+    top: 0.5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+}
+
+/* Skin engine — bottom slide-up drawer + per-app accents */
+.z-tab-up { border-bottom: 0; border-radius: 10px 10px 0 0; flex-direction: row; padding: 4px 14px; filter: drop-shadow(0 -4px 6px color-mix(in oklab, var(--warn) 60%, transparent)); }
+.z-tab-label-x { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+.z-sheet-up { animation: z-sheet-in-up .28s cubic-bezier(.2,.8,.2,1) both; box-shadow: 0 -14px 28px -10px color-mix(in oklab, var(--foreground) 55%, transparent), 0 -2px 14px -2px color-mix(in oklab, var(--warn) 55%, transparent); }
+@keyframes z-sheet-in-up { from { transform: translateY(100%); box-shadow: 0 -40px 50px -10px color-mix(in oklab, var(--foreground) 70%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .z-sheet-up { animation: none; } }
+
+/* Per-skin accents: tabs and sheets tint to the app's color */
+.skin-weather .z-tab, .skin-weather .z-sheet { border-color: #22d3ee; }
+.skin-weather .z-tab { filter: drop-shadow(0 0 6px color-mix(in oklab, #22d3ee 60%, transparent)); }
+.skin-mesh .z-tab, .skin-mesh .z-sheet { border-color: #2dd4a8; }
+.skin-mesh .z-tab { filter: drop-shadow(0 0 6px color-mix(in oklab, #2dd4a8 60%, transparent)); }
+.skin-weather .z-tab-left, .skin-mesh .z-tab-left { left: max(4px, env(safe-area-inset-left)); }
+.skin-weather .z-tab-right, .skin-mesh .z-tab-right { right: max(4px, env(safe-area-inset-right)); }
+.z-tab-up { bottom: max(4px, env(safe-area-inset-bottom)); }
+/* Under-light reflects each face's dominant screen tone, not the bezel. */
+.apex-bezel.skin-watch { --warn: var(--signal); --border: color-mix(in oklab, var(--signal) 48%, transparent); --screen-glow: var(--signal); }
+.apex-bezel.skin-weather { --warn: var(--scan); --border: color-mix(in oklab, var(--scan) 48%, transparent); --screen-glow: var(--scan); }
+.apex-bezel.skin-mesh { --warn: var(--event-rim, #2dd4a8); --border: color-mix(in oklab, var(--warn) 48%, transparent); --screen-glow: var(--event-rim, #2dd4a8); }
+.apex-bezel.skin-uap { --warn: var(--scan); --border: color-mix(in oklab, var(--scan) 48%, transparent); --screen-glow: var(--scan); }
+.apex-bezel.skin-ghost { --warn: var(--signal); --border: color-mix(in oklab, var(--signal) 48%, transparent); --screen-glow: var(--signal); }
+.apex-bezel.skin-mystic { --warn: var(--signal); --border: color-mix(in oklab, var(--signal) 48%, transparent); --screen-glow: var(--signal); }
+/* Screen-tone under-light available to sheets/tabs outside the bezel. */
+.skin-watch, .skin-ghost, .skin-mystic { --screen-glow: var(--signal); }
+.skin-weather, .skin-uap { --screen-glow: var(--scan); }
+.skin-mesh { --screen-glow: var(--event-rim, #2dd4a8); }
+.skin-cb, .skin-shield { --screen-glow: var(--warn); }
+.skin-uap .z-tab, .skin-uap .z-sheet { border-color: var(--scan); }
+.skin-ghost .z-tab, .skin-ghost .z-sheet { border-color: var(--signal); }
+.skin-mystic .z-tab, .skin-mystic .z-sheet { border-color: var(--signal); }
+
+/* Edge tab trim (2026-10-03): sides shorter, bottom shorter + thinner, all more translucent. */
+.z-tab { height: 100px; opacity: .38; background: color-mix(in oklab, var(--background) 22%, transparent); }
+.z-tab-up { width: auto; height: 18px; padding: 1px 10px; }
+.z-tab-up .z-tab-chev { font-size: 11px; }
+.z-tab-up .z-tab-label-x { font-size: 9px; letter-spacing: 0.14em; }
+@keyframes z-tab-breathe { 0%,100% { opacity: .3; } 50% { opacity: .6; } }
+.z-tab:hover, .z-tab:focus-visible, .z-tab:active { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .z-tab { opacity: .55; } }
+
+/* OLED bezel normalize (2026-10-03): every brand wears the CB's near-black
+   chassis; the accent is a thin rim tint only, so the bezel blends with the
+   page background instead of a bright colored frame. */
+.apex-bezel.skin-watch, .apex-bezel.skin-weather, .apex-bezel.skin-mesh,
+.apex-bezel.skin-uap, .apex-bezel.skin-ghost, .apex-bezel.skin-mystic, .apex-bezel.skin-shield {
+  --border: color-mix(in oklab, var(--warn) 22%, var(--background));
+}
+.apex-bezel.skin-weather { --warn: #e0623a; } /* cayenne */
+.apex-bezel.skin-watch { --warn: #3fbf6a; }
+.apex-bezel:is(.skin-watch, .skin-weather, .skin-mesh, .skin-uap, .skin-ghost, .skin-mystic, .skin-shield) {
+  border-color: color-mix(in oklab, var(--warn) 55%, var(--background));
+}
+/* Real watch panels paint bare — no bezel or edge tabs; phones/tablets get the full frame. */
+html[data-device="watch"] .apex-bezel, html[data-device="watch"] .z-tab { display: none; }
+.apex-bezel.skin-shield { --warn: var(--signal); }
+.skin-shield .z-tab, .skin-shield .z-sheet { border-color: var(--signal); }
+
+/* Stacked shelf: the bottom drawer ratchets between 1/3 and 2/3 with an LED seam. */
+.z-sheet-up { transition: height .22s steps(4, end); }
+.z-shelf-seam { height: 2px; margin: -2px -12px 6px; background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--warn) 80%, transparent), transparent); }
+.app-snap {
+  opacity: .48;
+  background: color-mix(in oklab, var(--background) 38%, transparent);
+  box-shadow: 0 -1px 5px color-mix(in oklab, var(--screen-glow, var(--warn)) 22%, transparent);
+  backdrop-filter: blur(4px);
+  transition: opacity .15s, background .15s;
+}
+.app-snap:hover, .app-snap:focus-visible, .app-snap:active { opacity: .92; background: color-mix(in oklab, var(--background) 78%, transparent); }
+
+/* CB drawer: lit like every other shelf — thin OLED line at the open edge
+   fading into the screen-coloured under-light (never the bezel, never white). */
+.cb-shelf-lit {
+  box-shadow:
+    0 -1px 0 color-mix(in oklab, var(--screen-glow, var(--warn)) 85%, transparent),
+    0 -3px 10px -2px color-mix(in oklab, var(--screen-glow, var(--warn)) 45%, transparent),
+    0 -14px 34px -8px color-mix(in oklab, var(--screen-glow, var(--warn)) 18%, transparent);
+}
+/* Open shelf drawer: only the radio controls scroll; the map section with its
+   squad/layer controls stays pinned at the bottom so scrolling can never lock
+   the user out of them. */
+.cb-shelf-open > .cb-history-dock,
+.cb-shelf-open > .cb-grille,
+.cb-shelf-open > .cb-history-peek { flex: none; }
+.cb-shelf-open > .cb-map-section {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  max-height: 46%;
+  min-height: 0;
+  overflow: hidden;
+}
+.cb-shelf-open > .cb-map-section > .cb-map-viewport { min-height: 96px; height: auto; flex: 1; }
+/* Map header + layer buttons ride as one rail that stacks right under the
+   call-history strip instead of sliding beneath it. */
+.cb-map-rail {
+  position: sticky;
+  top: var(--cb-peek-h, 0px);
+  z-index: 4;
+  background: var(--background);
+  box-shadow: 0 3px 7px color-mix(in oklab, var(--background) 75%, transparent);
+}
+.cb-peek-cell { min-height: 26px; }
+.cb-compact-face .cb-channel-controls { gap: 2px; padding: 4px; }
+.cb-compact-face .cb-channel-controls > .mt-auto { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding-top: 2px; }
+.cb-compact-face .cb-channel-controls > .mt-auto button { height: 28px; min-width: 0; padding: 0 1px; font-size: 10px; }
+.cb-compact-face .cb-channel-controls > .mt-auto button:first-child { grid-column: 1 / -1; }
+.cb-compact-face .cb-channel-display { padding: 4px; }
+.cb-compact-face .cb-led-readout { height: 68px; padding: 3px 0; }
+.cb-compact-face .cb-led-digit { height: 58px; }
+.cb-compact-face .cb-channel-display > .min-h-7 { min-height: 0; }
+.cb-compact-face .cb-channel-display > div:last-child { padding-top: 2px; }
+.cb-compact-face .cb-channel-display > div:last-child button { height: 30px; }
+.cb-compact-face .cb-history-peek-grille { display: none; }
+.cb-compact-face .cb-map-rail > div:last-child { flex-wrap: nowrap !important; overflow-x: auto; white-space: nowrap; }
+.cb-compact-face .cb-map-rail > div:last-child button { flex: none; height: 26px; padding: 0 6px; font-size: 11px; }
+.cb-handset-compact .cb-compact-work { max-height: 100px; overflow-y: auto; }
+.cb-handset-compact .cb-grille { flex: none; margin: 2px 0; padding: 2px 6px; }
+.cb-handset-compact .cb-grille > div:first-child { margin-bottom: 2px; }
+.cb-handset-compact .cb-grille .space-y-1 { display: none; }
+.cb-handset-compact .cb-map-section { flex: 1; display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
+.cb-handset-compact .cb-map-viewport { min-height: 64px; height: auto; flex: 1; }
+.cb-handset-compact .cb-map-section > .cb-map-rail + button { display: none; }
+.cb-handset-compact .cb-map-section > .cb-map-rail > div:nth-child(2) { display: none; }
+.cb-handset-compact .cb-history-peek { position: relative; top: auto; }
+.cb-handset-compact .cb-peek-cell { min-height: 20px; }
+.cb-peek-cell .cb-grille-led { flex-shrink: 0; }
+.cb-map-docked .cb-map-section { flex: 1; }
+.cb-map-docked .cb-map-viewport { min-height: 96px; }
+@media (max-height: 900px) {
+  .cb-map-docked .cb-map-viewport { min-height: 56px; }
+}
+.cb-public-docked { max-height: min(86px, 12dvh); }
+.cb-map-docked .cb-map-message-open { flex: none; height: min(112px, 18dvh); }
+.cb-map-docked .cb-map-message-open .cb-map-viewport { min-height: 48px; }
+.cb-map-docked .cb-history-peek-grille { display: none; }
+.cb-map-docked .cb-map-section > div:nth-child(3) button { flex: none; height: 28px; padding-inline: 7px; font-size: 12px; }
+
+.cb-node-inset { display: none; }
+/* The observed-position map is a real row below call history, not a floating
+   viewport overlay. The right-hand column scrolls it with the radio controls. */
+@media (orientation: landscape) and (max-height: 640px), (orientation: landscape) and (min-width: 1024px) {
+  .cb-deck.cb-layout-auto > .cb-bezel > .cb-node-inset {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    min-width: 0;
+    height: clamp(220px, 52dvh, 560px);
+  }
+}
+@media (orientation: landscape), (min-width: 760px) {
+  .cb-deck.cb-layout-base > .cb-bezel > .cb-node-inset {
+    display: flex;
+    flex-direction: column;
+    grid-column: 2;
+    min-width: 0;
+    height: clamp(220px, 52dvh, 560px);
+  }
+}
+@media (pointer: coarse) {
+  .cb-node-inset .cb-map-host.leaflet-container { touch-action: pan-y; }
+}
+
+/* Breathing room between screen content and the skeleton bezel so edge
+   controls never clip against the frame. */
+.apex-skin main { padding-left: 0.5rem; padding-right: 0.5rem; }
+.cb-deck { padding: 0.5rem; }
+.cb-deck.cb-layout-base { padding: 0.75rem; }
+.cb-deck .cb-bezel { padding-left: 0.25rem; padding-right: 0.25rem; }
+
+/* Private site-floor semantic neon palette. */
+:root {
+  --site-cyan: oklch(0.84 0.17 200);
+  --site-amber: oklch(0.87 0.19 88);
+  --site-lime: oklch(0.87 0.22 145);
+  --site-magenta: oklch(0.78 0.25 340);
+  --site-violet: oklch(0.76 0.21 300);
+  --site-red: oklch(0.7 0.25 25);
+  --site-floor: oklch(0.16 0.025 165);
+  --site-grid: oklch(0.44 0.08 174);
+}
+.site-tool-rail { background: var(--card); border: 1px solid var(--border); box-shadow: inset 0 -1px 0 var(--site-grid), 0 6px 24px -15px var(--site-cyan); }
+.site-floor { background: var(--site-floor); }

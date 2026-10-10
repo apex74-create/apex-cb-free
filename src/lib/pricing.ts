@@ -1,12 +1,11 @@
 /**
- * Pricing schema — rebuilt from the approved pricing lockdown plan
- * (.lovable/plan/pricing-lockdown-ready-to-build-2026-10-02.md).
+ * CB offer ladder. Paid base tiers carry live provider price ids; add-ons and
+ * named editions remain display-only until their fulfilment is verified.
  *
  * Four surfaces:
  *   1. CB LADDER      — base tiers, priced by handset count. Scanner tier is
  *                       a real differentiator between ladders.
- *   2. ADD-ONS        — per-handset upgrades (weather, maps, shield, routing,
- *                       GPS-less squad). Price = base + add-ons × handsets.
+ *   2. ADD-ONS        — draft per-handset upgrades, not checkout offers.
  *   3. NAMED EDITIONS — ready-made skins (Nightstand, Rancher, Gorilla Grow).
  *   4. OPERATOR TIER  — White Kit / Black Kit, contract-only, no buy button.
  *
@@ -26,13 +25,13 @@ export type CbTier = {
   tagline: string;
   amountUsd: number | null;
   period: BillingPeriod;
-  /** e.g. "+ $0.50 / handset / mo" — rendered beneath the amount. */
+  /** Proposed active-device monthly unit — rendered beneath the amount. */
   perHandset?: string;
   /** Max handsets covered by this tier's base allowance. */
   handsets: number;
   /** Channels available on each handset. */
   channels: number;
-  /** Short label for the scanner column: "40-ch linear", "270-ch recursive stack", etc. */
+  /** Short scanner label, not a promise of unverified relay service. */
   scanner: string;
   /** Highlights shown in the card body. */
   includes: string[];
@@ -48,112 +47,110 @@ export const CB_LADDER: CbTier[] = [
     licenceSlug: "cb-free-research",
     priceId: null,
     name: "Free (Research)",
-    tagline: "Free, paid for with aggregate sensor data.",
+    tagline: "20 channels free — emergency 9 and common 19 included.",
     amountUsd: 0,
     period: "once",
-    handsets: 3,
-    channels: 40,
-    scanner: "40-ch linear",
+    handsets: 2,
+    channels: 20,
+    scanner: "20-ch linear",
     includes: [
-      "Two-phone walkie-talkie over hotspot or Wi-Fi",
+      "20 channels, including emergency 9 and common 19",
       "Public channels, open to anyone on the network",
       "Limited weather brief",
-      "Your reports feed the sensor array (that's the deal)",
+      "Aggregate research contribution disclosed before joining",
+      "No daisy-chain relay — single-hop only",
     ],
     contact: true,
   },
   {
     id: "cb_keep_it_pair",
     licenceSlug: "cb-keep-it-pair",
-    priceId: "cb_keep_it_pair_onetime",
+    priceId: "keep_it_pair_onetime",
     name: "Keep-it Pair",
-    tagline: "Yours outright. No data sharing required.",
-    amountUsd: 9.99,
+    tagline: "Two sets for $20 — 80 channels, no monthly charge.",
+    amountUsd: 19.99,
     period: "once",
     handsets: 2,
-    channels: 40,
-    scanner: "40-ch linear",
+    channels: 80,
+    scanner: "80-ch linear",
     includes: [
-      "Two licensed handsets plus yours",
-      "Full channels 1–40",
-      "Keep sharing off if you want",
-      "Lifetime licence tied to your account",
+      "Two handset sets",
+      "80 channels",
+      "No daisy-chain relay (starts at Family / Squad)",
+      "No guaranteed lifetime hosted service",
+      "Licence delivery pending verification",
     ],
   },
   {
     id: "cb_family_squad",
     licenceSlug: "cb-family-squad",
-    priceId: "cb_family_squad_onetime",
+    priceId: "family_squad_onetime",
     name: "Family / Squad",
     tagline: "A six-handset set with private rooms.",
-    amountUsd: 19.99,
+    amountUsd: 39.99,
     period: "once",
     handsets: 6,
-    channels: 40,
-    scanner: "80-ch block scanner",
+    channels: 160,
+    scanner: "160-ch advanced scanner",
     includes: [
       "Up to 6 licensed handsets",
-      "Private encrypted rooms",
-      "Lost-token re-issue on request",
-      "Nightstand / baby-intercom skin available",
+      "160 channels with the advanced scanner",
+      "Daisy-chain relay across every link — the paid difference",
+      "Private digital rooms, pending device entitlement verification",
     ],
   },
   {
     id: "cb_crew",
     licenceSlug: "cb-crew",
-    priceId: "cb_crew_onetime",
+    priceId: "crew_onetime",
     name: "Crew Set",
-    tagline: "Ten handsets with foreman-grade scanning.",
-    amountUsd: 29.99,
+    tagline: "Crew controls for up to ten handsets.",
+    amountUsd: 69.99,
     period: "once",
-    perHandset: "+ $0.50 / handset / mo",
     handsets: 10,
-    channels: 80,
-    scanner: "160-ch block scanner",
+    channels: 270,
+    scanner: "270-ch super scanner",
     includes: [
       "Up to 10 licensed handsets",
-      "Private sub-channels for foremen",
-      "80 channels per handset",
-      "Scanner catches key-ups across the whole crew",
+      "Full 270 channels with the super scanner",
+      "Crew controls pending verification",
     ],
-    featured: true,
   },
   {
     id: "cb_job_site",
     licenceSlug: "cb-job-site",
-    priceId: "cb_job_site_monthly",
+    priceId: "job_site_monthly",
     name: "Job Site",
-    tagline: "One QR to the whole site. Tokens return when a phone leaves.",
-    amountUsd: 9.99,
+    tagline: "Single-site roster; managed billing not yet available.",
+    amountUsd: 29,
     period: "month",
-    perHandset: "+ $0.50 / handset",
+    perHandset: "+ $2 / active handset / month (max 30)",
     handsets: 30,
-    channels: 80,
-    scanner: "270-ch recursive stack",
+    channels: 270,
+    scanner: "270-ch super scanner",
     includes: [
       "Up to 30 handsets per site",
-      "Share one QR, everyone's on the same channel",
-      "Recursive stack scanner reports hits up the chain instantly",
-      "Cancelled seats return tokens to the pool",
+      "Site roster pending verification",
+      "270-channel scan pending verification",
+      "30 active handsets: $89/month proposed",
     ],
   },
   {
     id: "cb_site_pro",
     licenceSlug: "cb-site-pro",
-    priceId: "cb_site_pro_monthly",
+    priceId: "site_pro_monthly",
     name: "Site Pro",
-    tagline: "Multiple sites, 100 handsets, split scanning across operators.",
-    amountUsd: 24.99,
+    tagline: "Multiple sites and operator controls, contract proposal.",
+    amountUsd: 99,
     period: "month",
-    perHandset: "+ $0.50 / handset",
+    perHandset: "+ $2 / active handset / month (max 100)",
     handsets: 100,
-    channels: 80,
-    scanner: "270-ch recursive stack + multi-operator split",
+    channels: 270,
+    scanner: "270-ch super scanner",
     includes: [
       "Up to 100 handsets across multiple sites",
-      "Admin roster and site assignment",
-      "Scanner workload splits across operators above 270 channels",
-      "Priority on moderator-earned drop share",
+      "Multi-site controls pending verification",
+      "100 active handsets: $299/month proposed",
     ],
   },
 ];
@@ -177,9 +174,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_weather_basic",
     licenceSlug: "addon-weather-basic",
-    priceId: "addon_weather_basic_onetime",
+    priceId: null,
     name: "Weather (basic)",
-    summary: "Full forecast on that handset.",
+    summary: "Expanded weather for one handset; planned, not yet for sale.",
     amountUsd: 2,
     period: "once",
     unit: "per handset",
@@ -187,9 +184,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_weather_meteorologist",
     licenceSlug: "addon-weather-meteorologist",
-    priceId: "addon_weather_meteorologist_onetime",
+    priceId: null,
     name: "Meteorologist Kit",
-    summary: "Full kit, plus a media-ready report you can read on-air.",
+    summary: "Media-ready weather report; planned, not yet for sale.",
     amountUsd: 5,
     amountMaxUsd: 10,
     period: "once",
@@ -198,9 +195,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_maps_tremor",
     licenceSlug: "addon-maps-tremor",
-    priceId: "addon_maps_tremor_onetime",
+    priceId: null,
     name: "Maps + Tremor view",
-    summary: "Network and sensor visualization on the map.",
+    summary: "Network and sensor map view; planned, not yet for sale.",
     amountUsd: 3,
     period: "once",
     unit: "per handset",
@@ -208,9 +205,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_signal_shield",
     licenceSlug: "addon-signal-shield",
-    priceId: "addon_signal_shield_onetime",
+    priceId: null,
     name: "Signal Shield",
-    summary: "Trusted-tower check and spoof warning on that handset.",
+    summary: "Native trusted-tower checks planned; not an audited VPN or for sale yet.",
     amountUsd: 5,
     period: "once",
     unit: "per handset",
@@ -218,10 +215,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_routing_shield",
     licenceSlug: "addon-routing-shield",
-    priceId: "addon_routing_shield_onetime",
+    priceId: null,
     name: "Routing Shield (3-domain)",
-    summary:
-      "Anonymous in / out through the shield as the AP anchor over Starlink or hotspot.",
+    summary: "Protected routing proposal; not an audited VPN or for sale yet.",
     amountUsd: 10,
     period: "once",
     unit: "per handset — included in Op Kit",
@@ -229,9 +225,9 @@ export const ADD_ONS: AddOn[] = [
   {
     id: "addon_squad_gpsless",
     licenceSlug: "addon-squad-gpsless",
-    priceId: "addon_squad_gpsless_onetime",
+    priceId: null,
     name: "Squad positioning (no GPS)",
-    summary: "Crew positions from known radio reference points + trilateration.",
+    summary: "Estimated positions from reference points, not measured fixes; planned.",
     amountUsd: 5,
     period: "once",
     unit: "per handset",
@@ -256,7 +252,7 @@ export const NAMED_EDITIONS: NamedEdition[] = [
   {
     id: "edition_nightstand",
     licenceSlug: "edition-nightstand",
-    priceId: "edition_nightstand_onetime",
+    priceId: null,
     name: "Nightstand / Baby Intercom",
     tagline: "An old phone on the nightstand becomes a touch-anywhere intercom.",
     handsets: "3 handsets",
@@ -264,7 +260,7 @@ export const NAMED_EDITIONS: NamedEdition[] = [
       "Face-down standby, lift to hear",
       "Shake to close, touch anywhere for an emergency shout",
       "Dimmed always-on screen",
-      "Free with research licence, or $9.99 to opt out",
+      "Free research version; $9.99 skin/edition proposed, not a data opt-out",
     ],
     priceLabel: "Free or $9.99 once",
   },
@@ -273,13 +269,12 @@ export const NAMED_EDITIONS: NamedEdition[] = [
     licenceSlug: "edition-rancher",
     priceId: null,
     name: "Rancher",
-    tagline: "A small field server at the ranch; crew walkie-talkie sets ride on top.",
+    tagline: "A proposed field-server and CB setup for the ranch.",
     handsets: "12–30 handsets",
     includes: [
-      "Run your own server (Chromebook script, Windows Server, or a tunnel)",
-      "Starlink feeds the site, we pass out walkie-talkie sets",
-      "Local media rides along on the same channel",
-      "Site licence available for a one-time price",
+      "Field-server delivery and support terms require scoping",
+      "CB sets over supported digital links",
+      "Site licence subject to agreement",
     ],
     priceLabel: "$49–$99 / mo SaaS, or site licence",
     contact: true,
@@ -287,15 +282,14 @@ export const NAMED_EDITIONS: NamedEdition[] = [
   {
     id: "edition_gorilla",
     licenceSlug: "edition-gorilla-grow",
-    priceId: "edition_gorilla_grow_onetime",
+    priceId: null,
     name: "Gorilla Radio / Gorilla Grow",
     tagline: "Full weather, Shield, Starlink backpack — the mountain-grower kit.",
     handsets: "12 handsets",
     includes: [
-      "Full weather + human-input weather + dataset engine",
-      "Starlink backpack extender setup",
-      "Shield confirms your router signal is yours",
-      "Buy once or stay on managed updates",
+      "Weather and human observation workflow proposed",
+      "Field connectivity and Shield require native testing",
+      "Delivery and support terms require scoping",
     ],
     priceLabel: "$199 once, or $29.99 / mo",
   },
@@ -304,15 +298,14 @@ export const NAMED_EDITIONS: NamedEdition[] = [
 /* ------------------------------------------------------- farm-ag "report" */
 
 export const FARM_AG = {
-  title: "Farm Ag Kit — report to keep it",
+  title: "Farm Ag Kit — reporting proposal",
   summary:
-    "Full weather kit plus base CB, free, as long as you file a human weather report on your chosen cycle. Miss the window and advanced tools pause until you file. No ads: the report is the payment.",
+    "Free CB and weather reporting proposal. Human ground checks are evidence for review, not direct forecast-engine inputs. Report-based renewals are not active yet.",
   cycleOptions: ["Every 3 days", "Every 6 days", "Every 9 days"],
   unlocks: [
-    "File a dew observation and the dew/frost switches light up on your handset",
-    "Report wind and a wind-path layer appears on the map, built from everyone's reports + APRS",
-    "Optional HAM layer stacks on top",
-    "Streaks and your own station's history show on the map (no cartoon pets)",
+    "Record dew, frost and wind observations for review",
+    "Compare ground checks with the forecast separately",
+    "Renewal and advanced map layers await verification",
   ],
 };
 
@@ -373,7 +366,7 @@ export function amountLabel(tier: {
   if (tier.amountUsd === null) return "Contact";
   if (tier.amountUsd === 0) return "Free";
   const fmt = (n: number) =>
-    n >= 100 ? `$${n.toLocaleString("en-US")}` : `$${n.toFixed(2)}`;
+    Number.isInteger(n) ? `$${n.toLocaleString("en-US")}` : `$${n.toFixed(2)}`;
   const base = tier.amountMaxUsd
     ? `${fmt(tier.amountUsd)}–${fmt(tier.amountMaxUsd)}`
     : fmt(tier.amountUsd);
@@ -426,3 +419,113 @@ export const REDISTRIBUTION_LABEL: Record<DataProduct["redistribution"], string>
   commercial: "Commercial redistribution",
   broadcast: "Broadcast redistribution",
 };
+
+/* ------------------------------------------------------------------ */
+/* Use-based ladders (approved 2026-10-05)                            */
+/* ------------------------------------------------------------------ */
+
+export type UseRung = {
+  id: string;
+  name: string;
+  who: string;
+  priceLabel: string;
+  priceId: string | null;
+  licenceSlug: string;
+  includes: string[];
+  contact?: boolean;
+};
+
+/** Cast Net Mesh priced by who uses it. Attendee viewing is always free. */
+export const MESH_USE_LADDER: UseRung[] = [
+  {
+    id: "mesh_personal", name: "Personal", priceId: "mesh_personal_onetime", licenceSlug: "cast-net-mesh-personal",
+    who: "Hoedown in the back yard, airsoft property, family camp-out — not for profit.",
+    priceLabel: "$9.99 once",
+    includes: ["Map your own property: house, well, driveways, camp spots, range", "Unlimited QR sharing for unlimited events", "Up to 150 people per event", "Every guest who scans gets the viewer plus their own 7-day builder trial"],
+  },
+  {
+    id: "mesh_personal_cb_wx", name: "Personal + CB + Weather", priceId: "mesh_personal_cb_wx_onetime", licenceSlug: "cast-net-mesh-personal-cb-weather",
+    who: "Same private use, with radio and weather inside Mesh.",
+    priceLabel: "$24.99 once",
+    includes: ["Everything in Personal", "Companion 80-channel CB with daisy chain", "Weather Standard inside Mesh"],
+  },
+  {
+    id: "mesh_venue", name: "Venue", priceId: "mesh_venue_monthly", licenceSlug: "cast-net-mesh-venue",
+    who: "Small business: hotel event hall, campground, parking-lot vendors.",
+    priceLabel: "$49/mo or $399/yr",
+    includes: ["Unlimited floors for one property", "Vendor desk and pickup", "500 viewers per event", "Companion CB and weather included", "Apex look — no custom branding"],
+  },
+  {
+    id: "mesh_venue_pro", name: "Venue Pro", priceId: "mesh_venue_pro_monthly", licenceSlug: "cast-net-mesh-venue-pro",
+    who: "Multi-property operators and festival grounds.",
+    priceLabel: "$149/mo or $1,299/yr",
+    includes: ["Up to 5 properties", "2,500 viewers per event", "Your logo and colours on event pages", "Priority support"],
+  },
+  {
+    id: "mesh_enterprise", name: "Enterprise / Licensed assembly", priceId: null, licenceSlug: "cast-net-mesh-enterprise", contact: true,
+    who: "Ticketing-scale platforms whose engineers rebuild the look.",
+    priceLabel: "Contract · from $25k/yr + per-event fee",
+    includes: ["Licensed Mesh assembly, full white-label", "Your own domain", "NDA; engine stays ours — API access, no source"],
+  },
+];
+
+export const MESH_USE_RULES = [
+  "Viewing an event by QR and the floor viewer stay free forever.",
+  "Daisy chain is never free — it starts at Personal + CB + Weather.",
+  "Personal is non-commercial. Ticketed or commercial events need Venue or higher.",
+  "Earlier Builder purchases carry over as Personal; buyers keep what they paid for.",
+];
+
+/** Apex Watch Kit — one bundle, one price. Approved 2026-10-05 ($39–$69 range, set at $49). */
+export const WATCH_KIT: UseRung = {
+  id: "watch_kit",
+  name: "Apex Watch Kit",
+  priceId: "watch_kit_onetime",
+  licenceSlug: "apex-watch-kit",
+  who: "LokMat-class Android watches — the only software built to land on them.",
+  priceLabel: "$49 once",
+  includes: [
+    "Signal watch face — weather, chance of precipitation, time, bearing",
+    "Wrist CB radio — press-and-hold talk, channels 1–40, lands on 19",
+    "Shield radar view on the wrist",
+    "Sextant link",
+    "No subscription, no split packages — one price, everything on the watch",
+  ],
+};
+
+/** Free 7-day Watch Kit trial — an exploding coin drop, no card required. */
+export const WATCH_KIT_TRIAL: UseRung = {
+  id: "watch_kit_trial",
+  name: "Watch Kit Trial",
+  priceId: null,
+  licenceSlug: "apex-watch-kit-trial",
+  who: "Try the full watch bundle before you buy.",
+  priceLabel: "Free · 7 days",
+  includes: [
+    "Everything in the Apex Watch Kit for 7 days",
+    "Exploding coin drop — the trial coin lapses on its own, no card, no cancel step",
+    "Upgrade to the $49 kit any time and keep going",
+  ],
+};
+
+/** Greenhouse commercial — scales by site and device like Cast Net. */
+export const GREENHOUSE_COMMERCIAL: UseRung[] = [
+  {
+    id: "greenhouse_commercial", name: "Greenhouse Commercial", priceId: "greenhouse_commercial_monthly", licenceSlug: "greenhouse-commercial",
+    who: "One growing site with handsets and wall-mounted tablets.",
+    priceLabel: "$79/mo + $3 per device",
+    includes: ["1 site, up to 25 devices", "1 sensor array", "80-channel CB"],
+  },
+  {
+    id: "greenhouse_commercial_pro", name: "Greenhouse Commercial Pro", priceId: "greenhouse_commercial_pro_monthly", licenceSlug: "greenhouse-commercial-pro",
+    who: "Multi-house operations running several arrays.",
+    priceLabel: "$199/mo + $3 per device",
+    includes: ["Up to 5 sites, 100 devices", "Multiple sensor arrays", "270-channel CB", "Shield dash"],
+  },
+  {
+    id: "grower_enterprise", name: "Grower Enterprise", priceId: null, licenceSlug: "grower-enterprise", contact: true,
+    who: "Large growers and co-ops.",
+    priceLabel: "Contract",
+    includes: ["Unlimited sites", "API feed", "White-label", "Study-exempt"],
+  },
+];

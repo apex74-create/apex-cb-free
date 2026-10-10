@@ -26,7 +26,7 @@ export const BUNDLES: Record<string, string[]> = {
     "enphase-operator",
     "tremor-map-engine",
   ],
-  "apex-signal-watch": ["weather-basic", "enphase-operator"],
+  "apex-signal-watch": ["weather-basic"],
   "apex-operator-monthly": [
     "apex-signal-watch",
     "weather-basic",

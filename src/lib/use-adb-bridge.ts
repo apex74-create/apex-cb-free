@@ -10,7 +10,7 @@ import {
 } from "./bridge";
 import { currentAutonomy, onSettingsChange, type Autonomy } from "./watch-settings";
 import { buildCandidates, discoverAgents, insecureBlocked } from "./discovery";
-import { saveEndpoints, saveTarget } from "./bridge";
+import { isBlockedWs, saveEndpoints, saveTarget } from "./bridge";
 
 export type LogLine = {
   id: string;
@@ -26,7 +26,7 @@ const MAX_LOG = 120;
  * PC agent -> phone agent -> cloud relay. If the active socket drops we
  * advance to the next enabled endpoint, wrapping around with backoff.
  */
-export function useAdbBridge() {
+export function useAdbBridge(enabled = true) {
   const [endpoints, setEndpoints] = useState<BridgeEndpoint[]>([]);
   const [target, setTargetState] = useState<string>("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -94,9 +94,7 @@ export function useAdbBridge() {
     const active = endpoints.filter((e) => {
       if (!e.enabled || !e.url.trim()) return false;
       return !(
-        typeof window !== "undefined" &&
-        window.location.protocol === "https:" &&
-        e.url.startsWith("ws://")
+        isBlockedWs(e.url)
       );
     });
     if (active.length === 0) {
@@ -117,7 +115,7 @@ export function useAdbBridge() {
         return;
       }
       setState("offline");
-      const hasBlockedLocal = endpoints.some((e) => e.url.startsWith("ws://"));
+      const hasBlockedLocal = endpoints.some((e) => isBlockedWs(e.url));
       const why = hasBlockedLocal
         ? "hosted HTTPS cannot open a local ws:// agent — run the local watch deploy, or configure a trusted wss:// endpoint in ⚙"
         : "no bridge endpoint is enabled — configure a local agent or wss:// relay in ⚙";
@@ -423,9 +421,7 @@ export function useAdbBridge() {
       endpoints.filter((e) => {
         if (!e.enabled || !e.url.trim()) return false;
         return !(
-          typeof window !== "undefined" &&
-          window.location.protocol === "https:" &&
-          e.url.startsWith("ws://")
+          isBlockedWs(e.url)
         );
       }).length || 1;
     const cycles = Math.floor(attemptsRef.current / enabledCount);
@@ -440,9 +436,7 @@ export function useAdbBridge() {
         void autoDiscover();
       }
       const why =
-        typeof window !== "undefined" &&
-        window.location.protocol === "https:" &&
-        endpoints.some((e) => e.enabled && e.url.startsWith("ws://"))
+        endpoints.some((e) => e.enabled && isBlockedWs(e.url))
           ? "hosted HTTPS cannot open a local ws:// agent — run the local watch deploy, or configure a trusted wss:// endpoint"
           : "no agent answered — start adb-bridge-agent.mjs and check the host, port and token in ⚙";
       setDiagnosis(why);
@@ -459,8 +453,8 @@ export function useAdbBridge() {
   // (Re)start the connection loop whenever the endpoint list changes.
   useEffect(() => {
     if (endpoints.length === 0) return;
-    // Standalone mode: the watch runs on its own sensors, no phone dialled.
-    if (autonomy === "standalone") {
+    // Standalone mode (or a screen with no operator package): no dialling.
+    if (autonomy === "standalone" || !enabled) {
       stoppedRef.current = true;
       socketRef.current?.close();
       socketRef.current = null;
@@ -486,7 +480,7 @@ export function useAdbBridge() {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [endpoints, autonomy]);
+  }, [endpoints, autonomy, enabled]);
 
   /**
    * Reconnect as soon as the environment says it can work again: the radio
@@ -495,7 +489,7 @@ export function useAdbBridge() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const wake = () => {
-      if (autonomy === "standalone") return;
+      if (autonomy === "standalone" || !enabled) return;
       const socket = socketRef.current;
       if (socket && socket.readyState === WebSocket.OPEN) return;
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -514,7 +508,7 @@ export function useAdbBridge() {
       window.removeEventListener("online", wake);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [autonomy]);
+  }, [autonomy, enabled]);
 
   /**
    * Register work that must be re-run every time the link comes back up

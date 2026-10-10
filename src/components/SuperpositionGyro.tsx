@@ -423,26 +423,19 @@ export default function SuperpositionGyro({ strength = 0.5, className }: Props) 
           ctx.restore();
         }
         if (flash > 0.02) {
-          // shockwave: the graphic pops the instant the gimbal comes true
+          // A short spectral shockwave reads clearly without a full-screen strobe.
           const wave = 1 - flash;
           ctx.save();
-          ctx.strokeStyle = `rgba(255,255,255,${flash * 0.8})`;
-          ctx.lineWidth = 2 + 4 * flash;
-          ctx.beginPath();
-          ctx.arc(cx, cy, R * (0.3 + wave * 0.95), 0, TAU);
-          ctx.stroke();
-          ctx.strokeStyle = `rgba(57,255,20,${flash * 0.6})`;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(cx, cy, R * (0.2 + wave * 1.25), 0, TAU);
-          ctx.stroke();
-          const pop = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-          pop.addColorStop(0, `rgba(255,255,255,${flash * 0.35})`);
-          pop.addColorStop(1, "rgba(57,255,20,0)");
-          ctx.fillStyle = pop;
-          ctx.beginPath();
-          ctx.arc(cx, cy, R, 0, TAU);
-          ctx.fill();
+          const spectral = ["#ff4864", "#ffba42", "#ffe85a", "#48e88a", "#4dcfff", "#aa83ff"];
+          const radius = R * (0.3 + wave * 0.95);
+          spectral.forEach((color, i) => {
+            ctx.globalAlpha = flash * 0.72;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5 + 2 * flash;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, (i / spectral.length) * TAU - Math.PI / 2, ((i + 1) / spectral.length) * TAU - Math.PI / 2);
+            ctx.stroke();
+          });
           ctx.restore();
         }
       } catch {
@@ -494,16 +487,10 @@ export default function SuperpositionGyro({ strength = 0.5, className }: Props) 
           </svg>
         </div>
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+          <defs><linearGradient id="cb-spectral-flash" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ff4864" /><stop offset="20%" stopColor="#ffba42" /><stop offset="40%" stopColor="#ffe85a" /><stop offset="60%" stopColor="#48e88a" /><stop offset="80%" stopColor="#4dcfff" /><stop offset="100%" stopColor="#aa83ff" /></linearGradient></defs>
           {level ? (
             <g key="lock" fill="none">
-              <circle
-                cx="50"
-                cy="50"
-                r="30"
-                stroke="#ffffff"
-                strokeWidth="2"
-                className="gyro-flash"
-              />
+              <circle cx="50" cy="50" r="30" fill="none" stroke="url(#cb-spectral-flash)" strokeWidth="2" className="gyro-flash" />
               <g stroke="#ffd60a" strokeWidth="1.4">
                 <path d="M12 24 L12 12 L24 12" />
                 <path d="M88 24 L88 12 L76 12" />

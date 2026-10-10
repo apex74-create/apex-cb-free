@@ -25,6 +25,13 @@ import { useDeadReckon } from "@/lib/use-dead-reckon";
 import { Button } from "@/components/ui/button";
 
 type Base = "street" | "topo" | "sat";
+type MapScope = "area" | "town" | "state" | "world";
+const MAP_SCOPE: Record<MapScope, { radius: number; zoom: number; label: string }> = {
+  area: { radius: 2000, zoom: 14, label: "Area · 2 km" },
+  town: { radius: 20000, zoom: 11, label: "Town · 20 km" },
+  state: { radius: 250000, zoom: 7, label: "State · 250 km" },
+  world: { radius: Infinity, zoom: 2, label: "Worldwide · this room" },
+};
 type Wx = { t: number; rh: number; dew: number; wind: number; vpd: number };
 type Alert = { id: string; event: string; severity: string; headline: string };
 
@@ -50,13 +57,30 @@ function vpdKpa(tF: number, rh: number) {
 export function CbMapDeck({
   room = "19",
   roomKey = null,
+  privateRoom = false,
   callsign = "",
   keyed = false,
+  fullMap = false,
+  docked = false,
+  messageOpen = false,
+  enableLiveFollow = false,
+  onDockMap,
+  onFullMapChange,
+  txHot = {},
 }: {
   room?: string;
   roomKey?: CryptoKey | null;
+  privateRoom?: boolean;
   callsign?: string;
   keyed?: boolean;
+  fullMap?: boolean;
+  docked?: boolean;
+  messageOpen?: boolean;
+  enableLiveFollow?: boolean;
+  onDockMap?: () => void;
+  onFullMapChange?: (expanded: boolean) => void;
+  /** callsign → last transmission time; lines to a transmitting peer flash red */
+  txHot?: Record<string, number>;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const L = useRef<typeof import("leaflet") | null>(null);
@@ -81,13 +105,27 @@ export function CbMapDeck({
   const [online, setOnline] = useState(true);
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
+  /** bumps when a hot transmission fades so red routing lines clear themselves */
+  const [hotTick, setHotTick] = useState(0);
+
+  /* A routing line stays red for 4 s after the last transmission from either
+   * end; this timer wakes the draw pass when the last hot line should fade. */
+  useEffect(() => {
+    const now = Date.now();
+    const fresh = Object.values(txHot).filter((t) => now - t < 4000);
+    if (!fresh.length) return;
+    const id = window.setTimeout(() => setHotTick((n) => n + 1), 4100);
+    return () => window.clearTimeout(id);
+  }, [txHot, hotTick]);
   const [squad, setSquad] = useState(false);
   const [showSt, setShowSt] = useState(true);
   const [stList, setStList] = useState<StationObs[]>([]);
   const [radio, setRadio] = useState<RadioAlert[]>([]);
   const [picked, setPicked] = useState<StationObs | null>(null);
   const [zoom, setZoom] = useState(12);
-  const [fullMap, setFullMap] = useState(false);
+  const [macroFollow, setMacroFollow] = useState(false);
+  const [scope, setScope] = useState<MapScope>("area");
+  const [homeAnchor, setHomeAnchor] = useState<[number, number] | null>(null);
   const [showSquadDetails, setShowSquadDetails] = useState(true);
   const [showWeather, setShowWeather] = useState(true);
   const stLayer = useRef<import("leaflet").LayerGroup | null>(null);
@@ -125,6 +163,11 @@ export function CbMapDeck({
       setSquadStatus("not sharing");
       return;
     }
+    if (privateRoom && !roomKey) {
+      setPeers({});
+      setSquadStatus("unlocking private room");
+      return;
+    }
     const me = callsign || "UNIT";
     const s = joinSquad(room, roomKey, me, (p) => setPeers((m) => ({ ...m, [p.id]: p })), setSquadStatus);
     const beat = () => {
@@ -146,7 +189,7 @@ export function CbMapDeck({
       window.clearTimeout(first);
       s.leave();
     };
-  }, [squad, room, roomKey, callsign]);
+  }, [squad, room, roomKey, privateRoom, callsign]);
 
   useEffect(() => {
     if (!manualMode || !map.current) return;
@@ -193,27 +236,63 @@ export function CbMapDeck({
     const refresh = () => map.current?.invalidateSize();
     const frame = requestAnimationFrame(refresh);
     window.addEventListener("resize", refresh);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", refresh); };
+    const observer = host.current ? new ResizeObserver(refresh) : null;
+    if (host.current && observer) observer.observe(host.current);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", refresh); observer?.disconnect(); };
   }, [ready, fullMap]);
 
   /* position */
   const locate = () => {
+    const apply = (p: GeolocationPosition) => {
+      setPos([p.coords.latitude, p.coords.longitude]);
+      setAcc(p.coords.accuracy);
+      setFix(true);
+      setPositionSource("browser");
+      setLocationAge(Date.now());
+      if (macroFollow) map.current?.setView([p.coords.latitude, p.coords.longitude], Math.max(map.current.getZoom(), 12));
+    };
+    // Chromebooks have no GPS chip: a quick network fix lands in seconds, then the precise one refines it.
+    navigator.geolocation?.getCurrentPosition(apply, () => undefined, { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 });
     navigator.geolocation?.getCurrentPosition(
-      (p) => {
-        setPos([p.coords.latitude, p.coords.longitude]);
-        setAcc(p.coords.accuracy);
-        setFix(true);
-        setPositionSource("browser");
-        setLocationAge(Date.now());
-        map.current?.setView([p.coords.latitude, p.coords.longitude], 14);
-      },
+      apply,
       () => { if (positionSource === "fallback") setFix(false); },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 },
     );
   };
   useEffect(() => {
     if (ready) locate();
   }, [ready]);
+
+  useEffect(() => {
+    if (!macroFollow || !ready || positionSource === "fallback") return;
+    map.current?.panTo(pos, { animate: false });
+  }, [macroFollow, ready, pos, positionSource]);
+
+  const scopeCenter = homeAnchor ?? (positionSource === "fallback" ? null : pos);
+  const visiblePeers = Object.values(peers)
+    .filter((p) => Date.now() - p.at < PEER_STALE_MS)
+    .filter((p) => !scopeCenter || distanceM({ lat: scopeCenter[0], lon: scopeCenter[1] }, p) <= MAP_SCOPE[scope].radius)
+    .sort((a, b) => b.at - a.at).slice(0, 80);
+  const chooseScope = (next: MapScope) => {
+    setScope(next);
+    const center = homeAnchor ?? (positionSource === "fallback" ? null : pos);
+    if (center) map.current?.setView(center, MAP_SCOPE[next].zoom);
+    setMacroFollow(false);
+  };
+
+  // The pulled-up handset map needs continuous fixes even when Squad sharing is off.
+  // This remains local to this viewport and stops when the map is tucked or Follow is off.
+  useEffect(() => {
+    if (!enableLiveFollow || !macroFollow || !navigator.geolocation) return;
+    const watcher = navigator.geolocation.watchPosition(({ coords }) => {
+      setPos([coords.latitude, coords.longitude]);
+      setAcc(coords.accuracy);
+      setFix(true);
+      setPositionSource("browser");
+      setLocationAge(Date.now());
+    }, () => undefined, { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 });
+    return () => navigator.geolocation.clearWatch(watcher);
+  }, [enableLiveFollow, macroFollow]);
 
   /* base layer */
   useEffect(() => {
@@ -283,26 +362,60 @@ export function CbMapDeck({
     const cs = host.current ? getComputedStyle(host.current) : null;
     const sig = cs?.getPropertyValue("--signal").trim() || "currentColor";
     const warn = cs?.getPropertyValue("--warn").trim() || "currentColor";
+    const hot = cs?.getPropertyValue("--alert").trim() || "currentColor";
+    const now = Date.now();
+    const isHot = (from: string) => {
+      const t = txHot[from];
+      return !!t && now - t < 4000;
+    };
     const nodes = [
       ...(positionSource === "fallback" ? [] : [{ from: callsign || "YOU", lat: pos[0], lon: pos[1], acc, me: true, source: positionSource }]),
-      ...Object.values(peers).map((p) => ({ ...p, me: false })),
+      ...visiblePeers.map((p) => ({ ...p, me: false })),
     ];
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i]!;
-        const b = nodes[j]!;
+    // Screen-only spidering first, so spoke lines end where the pin is drawn.
+    // Never alters a peer's shared coordinates. "Me" is reserved so peers don't sit on it.
+    const shownAt = new Map<string, import("leaflet").LatLng>();
+    const occupied: Array<{ x: number; y: number }> = [];
+    const meNode = nodes.find((n) => n.me);
+    if (meNode) { const p = map.current.latLngToLayerPoint([meNode.lat, meNode.lon]); occupied.push({ x: p.x, y: p.y }); }
+    for (const n of nodes) {
+      if (n.me) continue;
+      const point = map.current.latLngToLayerPoint([n.lat, n.lon]);
+      let shifted = point;
+      for (let ring = 0; ring < 8; ring++) {
+        const candidates = ring === 0 ? [point] : Array.from({ length: ring * 8 }, (_, i) =>
+          point.add(Lf.point(Math.cos(i * Math.PI / (ring * 4)) * ring * 19, Math.sin(i * Math.PI / (ring * 4)) * ring * 19)));
+        const available = candidates.find((c) => occupied.every((p) => Math.hypot(c.x - p.x, c.y - p.y) >= 19));
+        if (available) { shifted = available; break; }
+      }
+      occupied.push({ x: shifted.x, y: shifted.y });
+      shownAt.set(n.from, map.current.layerPointToLatLng(shifted));
+    }
+    // Spokes always start at this handset (live fix) so direction is never
+    // drawn from a stale home anchor; home anchor only when no live fix.
+    const origin = positionSource !== "fallback" ? nodes[0] : homeAnchor ? { from: "HOME", lat: homeAnchor[0], lon: homeAnchor[1] } : null;
+    if (origin) for (const b of nodes.filter((n) => !n.me).slice(0, 40)) {
+        const a = origin;
         const d = distanceM(a, b);
         const linked = d <= WIFI_REACH_M * 2;
-        Lf.polyline(
-          [
-            [a.lat, a.lon],
-            [b.lat, b.lon],
-          ],
-          { color: linked ? sig : warn, weight: linked ? 2 : 1, dashArray: linked ? undefined : "3 6" },
-        )
-          .bindTooltip(`~${Math.round(d)} m · ${linked ? "estimated rings intersect" : "out of estimated reach"}`)
+        const bHot = isHot(b.from);
+        const active = isHot(a.from) || bHot;
+        const end = shownAt.get(b.from) ?? Lf.latLng(b.lat, b.lon);
+        // Draw in the direction of travel: talker → listener, so the dash animation flows the right way.
+        const path: [number, number][] = bHot ? [[end.lat, end.lng], [a.lat, a.lon]] : [[a.lat, a.lon], [end.lat, end.lng]];
+        const spoke = Lf.polyline(
+          path,
+          active
+            ? { color: hot, weight: 4, opacity: 0.95, lineCap: "round", className: bHot ? "cb-tx-spoke-in" : "cb-tx-spoke-out" }
+            : { color: linked ? sig : warn, weight: linked ? 2 : 1, dashArray: linked ? undefined : "3 6" },
+        );
+        spoke
+          .bindTooltip(
+            active
+              ? `${bHot ? b.from : a.from} transmitting · map distance ~${Math.round(d)} m (not a verified link)`
+              : `~${Math.round(d)} m · estimated separation, not a verified link`,
+          )
           .addTo(g);
-      }
     }
     for (const n of nodes) {
       Lf.circle([n.lat, n.lon], {
@@ -314,15 +427,26 @@ export function CbMapDeck({
       }).addTo(g);
       if (!n.me) {
         const detail = document.createElement("span");
-        detail.textContent = `${n.from} · ${n.source} ±${Math.round(n.acc)} m`;
-        Lf.circleMarker([n.lat, n.lon], { radius: 6, color: warn, weight: 2, fillOpacity: 0.9 })
-          .bindPopup(detail, { closeButton: true })
-          .addTo(g);
+        detail.textContent = `${n.from} · ${n.source} ±${Math.round(n.acc)} m · pin offset on crowded maps`;
+        const actual = Lf.latLng(n.lat, n.lon);
+        const shown = shownAt.get(n.from) ?? actual;
+        if (map.current.latLngToLayerPoint(shown).distanceTo(map.current.latLngToLayerPoint(actual)) > 2) Lf.polyline([actual, shown], { color: warn, weight: 1, dashArray: "2 4", opacity: 0.7 }).addTo(g);
+        const palette = ["--warn", "--scan", "--rim-violet", "--rim-cyan", "--rim-orange", "--rim-green"];
+        const hash = [...n.from].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 0);
+        const color = cs?.getPropertyValue(palette[hash % palette.length] ?? "--warn").trim() || warn;
+        const marker = document.createElement("span");
+        marker.className = "cb-squad-pin";
+        marker.style.setProperty("--pin-color", color);
+        marker.textContent = n.from.slice(0, 2).toUpperCase();
+        Lf.marker(shown, { icon: Lf.divIcon({ html: marker, className: "cb-squad-pin-wrap", iconSize: [26, 26], iconAnchor: [13, 13] }) })
+          .bindPopup(detail, { closeButton: true }).addTo(g);
       }
     }
+    if (homeAnchor) Lf.circleMarker(homeAnchor, { radius: 7, color: sig, weight: 2, fillOpacity: 0.2 })
+      .bindTooltip("Home anchor · local display only").addTo(g);
     g.addTo(map.current);
     squadLayer.current = g;
-  }, [ready, squad, peers, pos, acc, callsign, positionSource]);
+  }, [ready, squad, peers, pos, acc, callsign, positionSource, txHot, hotTick, scope, homeAnchor, zoom]);
 
   /* weather stations */
   useEffect(() => {
@@ -408,16 +532,28 @@ export function CbMapDeck({
     };
   }, [online, pos]);
 
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    const stopFollow = () => setMacroFollow(false);
+    m.on("dragstart", stopFollow);
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    if (coarse && !fullMap) m.dragging.disable();
+    else m.dragging.enable();
+    return () => { m.off("dragstart", stopFollow); };
+  }, [ready, fullMap]);
+
   return (
-    <section className={`cb-map-section mt-1 w-full border border-border bg-background ${fullMap ? "fixed inset-0 z-[1000] !m-0 flex h-dvh flex-col" : ""}`}>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background px-2 py-1 text-[14px] text-muted-foreground">
-        <span className="min-w-0 truncate">{fullMap ? `${room} · ${squad ? `${Object.keys(peers).length} peers · ${squadStatus}` : "map"} · z${zoom}` : `FIELD MAP · z${zoom}`}</span>
+    <section className={`cb-map-section mt-1 w-full border border-border bg-background ${fullMap || docked ? "!m-0 flex min-h-0 flex-1 flex-col" : ""} ${docked && messageOpen ? "cb-map-message-open" : ""}`}>
+      <div className={fullMap || docked ? "contents" : "cb-map-rail"}>
+      <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background px-2 py-1 text-[14px] text-muted-foreground">
+         <span className="min-w-0 truncate">{fullMap ? `${room} · ${squad ? `${visiblePeers.length} peers · ${squadStatus}` : "map"} · z${zoom}` : `FIELD MAP · ${room} · z${zoom}`}</span>
         <div className="flex shrink-0 items-center gap-2">
           <span role="status" aria-label={keyed ? "PTT transmitting" : "PTT idle"} title={keyed ? "PTT transmitting" : "PTT idle"} className={`cb-ptt-light ${keyed ? "cb-ptt-live" : ""}`} />
-          <Button type="button" size="sm" variant="outline" onClick={() => setFullMap((v) => !v)} aria-label={fullMap ? "Exit full map" : "Full map"}>{fullMap ? "Exit" : "Full map"}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onFullMapChange?.(!fullMap)} aria-label={fullMap ? "Return to radio controls" : "Expand map"}>{fullMap ? "Back to controls" : "Expand map"}</Button>
         </div>
       </div>
-      {!fullMap && <div className="grid grid-cols-2 gap-1 border-b border-border p-1 text-[13px] max-[350px]:grid-cols-1">
+      {!fullMap && !docked && <div className="grid grid-cols-2 gap-1 border-b border-border p-1 text-[13px] max-[350px]:grid-cols-1">
         <div className="min-w-0">
           <Button type="button" size="sm" variant="ghost" className="h-auto px-1 text-signal" onClick={() => setShowSquadDetails((v) => !v)} aria-expanded={showSquadDetails}>Squad {showSquadDetails ? "▾" : "▸"}</Button>
           {showSquadDetails && <span className="break-words text-muted-foreground">{squad ? `${squadStatus} · ${positionSource === "fallback" ? "position unavailable" : `${positionSource} ±${Math.round(acc)}m · ${Math.round((Date.now() - locationAge) / 60000)}m old`}${reckon?.source === "inertial" ? ` · ${reckon.steps} steps · no sat` : ""}` : "not sharing"}</span>}
@@ -435,7 +571,7 @@ export function CbMapDeck({
           })()}
         </div>
       </div>}
-      {!fullMap && <div className="flex flex-wrap gap-1 border-b border-border bg-background p-1">
+      {!fullMap && !(docked && messageOpen) && <div className={`flex gap-1 border-b border-border bg-background p-1 ${docked ? "shrink-0 overflow-x-auto whitespace-nowrap" : "flex-wrap"}`}>
         {(["street", "topo", "sat"] as Base[]).map((b) => <Button key={b} type="button" size="sm" variant={base === b ? "default" : "outline"} onClick={() => setBase(b)}>{b}</Button>)}
         <Button type="button" size="sm" variant={dopp ? "default" : "outline"} onClick={() => setDopp((v) => !v)}>Doppler</Button>
         <Button type="button" size="sm" variant={apex ? "default" : "outline"} onClick={() => setApex((v) => !v)}>Signal</Button>
@@ -443,11 +579,20 @@ export function CbMapDeck({
         <Button type="button" size="sm" variant={squad ? "default" : "outline"} onClick={() => setSquad((v) => !v)}>Squad {squad ? Object.keys(peers).length : ""}</Button>
         {squad && <Button type="button" size="sm" variant="outline" onClick={() => setManualMode((v) => !v)}>{manualMode ? "Tap map" : "Set pin"}</Button>}
       </div>}
+      </div>
+      {!fullMap && !docked && <Button type="button" variant="ghost" size="sm" onClick={onDockMap} className="w-full shrink-0 text-signal" aria-label="Open map beneath radio controls">Open map beneath radio controls ↑</Button>}
+       {!(docked && messageOpen) && <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border px-2 py-1 text-[12px] text-muted-foreground">
+          <select value={scope} onChange={(event) => chooseScope(event.target.value as MapScope)} aria-label="Map connection range" className="h-7 min-w-0 flex-1 border border-border bg-card px-2 text-[12px] text-foreground">
+            {(Object.keys(MAP_SCOPE) as MapScope[]).map((s) => <option key={s} value={s}>{MAP_SCOPE[s].label}</option>)}
+          </select>
+         <Button type="button" size="sm" variant={homeAnchor ? "default" : "outline"} className="h-7 shrink-0 px-2 text-[12px]" disabled={positionSource === "fallback" && !homeAnchor} aria-label={homeAnchor ? "Unlock home map anchor" : "Lock map to current position as home"} aria-pressed={!!homeAnchor} onClick={() => { setHomeAnchor(homeAnchor ? null : pos); setMacroFollow(false); }}>{homeAnchor ? "Home locked" : "Lock home"}</Button>
+         <Button type="button" size="sm" variant={macroFollow ? "default" : "outline"} className="h-7 shrink-0 px-2 text-[12px]" aria-label={macroFollow ? "Stop following handset on connection map" : "Follow handset on connection map"} aria-pressed={macroFollow} onClick={() => { setMacroFollow((v) => !v); if (homeAnchor) setHomeAnchor(null); }}>{macroFollow ? "Follow on" : "Follow off"}</Button>
+      </div>}
       {!fullMap && (alerts.length > 0 || radio.length > 0) && <div className="border-b border-alert bg-background px-2 py-1 text-[14px] text-alert" role="alert">
         {online && alerts.slice(0, 2).map((a) => <p key={a.id} className="break-words">⚠ {a.event} — {a.headline}</p>)}
         {radio.slice(0, 2).map((a) => <p key={a.id} className="break-words">⚠ radio · {a.event} {a.area ? `— ${a.area}` : ""}</p>)}
       </div>}
-      <div className={`relative min-h-[320px] overflow-hidden bg-background ${fullMap ? "min-h-0 flex-1" : "aspect-square"}`}>
+      <div className={`cb-map-viewport relative overflow-hidden bg-background ${fullMap || docked ? "min-h-0 flex-1" : "h-[320px] sm:h-[min(50vh,500px)]"}`}>
       <div ref={host} className="cb-map-host absolute inset-0 z-0 bg-background" />
 
       {picked ? (

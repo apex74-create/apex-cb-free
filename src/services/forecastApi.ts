@@ -283,10 +283,13 @@ async function fetchHandsetFeeds(
     timezone: "UTC",
   });
   const get = async (q: URLSearchParams) => {
+    if (signal?.aborted) throw new DOMException("cancelled", "AbortError");
     try {
       const r = await fetch(base + q.toString(), signal ? { signal } : {});
       return r.ok ? ((await r.json()) as unknown) : undefined;
-    } catch {
+    } catch (err) {
+      // A cancelled request must stop the whole chain, not fall through.
+      if (signal?.aborted) throw err;
       return undefined;
     }
   };

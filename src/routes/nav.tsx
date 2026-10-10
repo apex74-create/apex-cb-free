@@ -32,6 +32,8 @@ export const Route = createFileRoute("/nav")({
 const TILES = [
   { to: "/face", label: "Watch face", note: "signal face · always on" },
   { to: "/map", label: "Position", note: "where you are" },
+  { to: "/sextant", label: "Sextant", note: "sun and horizon" },
+  { to: "/radar", label: "Compass · radar", note: "heading and presence" },
 ] as const;
 
 function NavHome() {

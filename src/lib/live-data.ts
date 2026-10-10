@@ -115,6 +115,7 @@ export function useLiveCommand<T>(
   cmd: string,
   parse: (raw: string) => T,
   intervalMs = 6000,
+  enabled = true,
 ): LiveState<T> {
   const { run, state } = useBridge();
   const [data, setData] = useState<T | null>(null);
@@ -129,6 +130,12 @@ export function useLiveCommand<T>(
 
   useEffect(() => {
     let cancelled = false;
+    if (!enabled) {
+      setData(null);
+      setError("signal input disabled");
+      setLoading(false);
+      return;
+    }
     if (state !== "online") {
       setError("no bridge link");
       setLoading(false);
@@ -160,7 +167,7 @@ export function useLiveCommand<T>(
       cancelled = true;
       if (timer) clearInterval(timer);
     };
-  }, [cmd, intervalMs, run, state, tick]);
+  }, [cmd, intervalMs, run, state, tick, enabled]);
 
   return { data, raw, error, loading, at, refresh: () => setTick((t) => t + 1) };
 }

@@ -1,3 +1,4 @@
+import { APP_DOMAINS } from "./app-routes";
 /**
  * Single source of truth for every Sovereign CB address.
  * Add or move a CB page here, never as a loose string in a screen.
@@ -11,11 +12,13 @@ export const CB_ROUTES = {
   face: "/w",
   /** Small wrist radio opened by the watch face's PTT button. */
   wrist: "/wcb",
+  /** Baked single-file Lokmat CB edition (radar + PTT, no framework). */
+  lokmat: "/lcb.html",
   sales: "/store",
 } as const;
 
-export const CB_SHARE_URL = `https://tinyradr.lovable.app${CB_ROUTES.entry}`;
-export const CB_OG_IMAGE = "https://tinyradr.lovable.app/og-cb.jpg";
+export const CB_SHARE_URL = `${APP_DOMAINS.cb}${CB_ROUTES.entry}`;
+export const CB_OG_IMAGE = `${APP_DOMAINS.cb}/og-cb.jpg`;
 
 /** Pages that wear the CB icon, manifest and no global back button. */
 export function isCbPath(path: string) {

@@ -110,6 +110,7 @@ export default function BridgeDoctor({
           retries: 2,
           backoffMs: 600,
           signal: ctrl.signal,
+          token: endpoints.find((e) => e.id === row.key)?.token ?? "",
         });
         setRows((prev) =>
           prev.map((r) => (r.key === row.key ? { ...r, result, running: false } : r)),

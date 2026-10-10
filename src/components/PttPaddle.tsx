@@ -15,6 +15,7 @@ import { bindPttKey } from "@/lib/ptt-key";
 
 /** Under this, a press counts as a tap and latches the mic open. */
 const TAP_MS = 250;
+const RELEASE_GRACE_MS = 280;
 
 export type PaddleState = "idle" | "keyed" | "blocked";
 
@@ -42,17 +43,33 @@ export function PttPaddle({
   const [hint, setHint] = useState<string>("");
   const downAt = useRef(0);
   const busy = useRef(false);
+  const opening = useRef<Promise<boolean> | null>(null);
+  const releaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const down = useRef(false);
+  const resumed = useRef(false);
+
+  const cancelRelease = () => {
+    if (releaseTimer.current) clearTimeout(releaseTimer.current);
+    releaseTimer.current = null;
+  };
+
+  useEffect(() => () => cancelRelease(), []);
 
   const open = useCallback(async () => {
+    if (opening.current) return opening.current;
     if (busy.current || disabled) return false;
     busy.current = true;
-    const ok = await onOpen();
-    busy.current = false;
-    if (!ok) setHint("mic did not open");
-    return ok;
+    const pending = Promise.resolve().then(onOpen).then((ok) => {
+      if (!ok) setHint("mic did not open");
+      return ok;
+    }).catch(() => { setHint("mic did not open"); return false; }).finally(() => { busy.current = false; opening.current = null; });
+    opening.current = pending;
+    return pending;
   }, [disabled, onOpen]);
 
   const send = useCallback(async () => {
+    cancelRelease();
+    if (opening.current) await opening.current;
     setLatched(false);
     await onSend();
   }, [onSend]);
@@ -62,16 +79,20 @@ export function PttPaddle({
     if (disabled) return;
     return bindPttKey(
       () => {
+        cancelRelease();
         setHint("side key");
         void open();
       },
-      () => void send(),
+      () => { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); },
     );
   }, [disabled, open, send]);
 
   const pointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
+    down.current = true;
+    resumed.current = !!releaseTimer.current;
+    if (releaseTimer.current) { cancelRelease(); downAt.current = Date.now(); return; }
     downAt.current = Date.now();
     if (latched) return; // second tap: handled on release
     void open();
@@ -79,15 +100,18 @@ export function PttPaddle({
 
   const pointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (!down.current) return;
+    down.current = false;
     const held = Date.now() - downAt.current;
     if (latched) return void send(); // second tap sends
-    if (held < TAP_MS && keyed) {
-      // Quick tap: stay on air until the next tap.
-      setLatched(true);
-      setHint("mic open — tap again to send");
+    if (held < TAP_MS && !resumed.current) {
+      // If permission takes longer than the tap, wait until recording is live.
+      void open().then((ok) => { if (ok) { setLatched(true); setHint("mic open — tap again to send"); } });
       return;
     }
-    void send();
+    resumed.current = false;
+    cancelRelease();
+    releaseTimer.current = setTimeout(() => { if (!down.current) void send(); }, RELEASE_GRACE_MS);
   };
 
   const label = disabled
@@ -99,28 +123,28 @@ export function PttPaddle({
       : "hold to talk  ·  or tap once";
 
   return (
-    <div className="mb-2 select-none">
+    <div className="mb-1 select-none">
       <button
         type="button"
         disabled={disabled}
         draggable={false}
         onPointerDown={pointerDown}
         onPointerUp={pointerUp}
-        onPointerCancel={() => keyed && !latched && void send()}
+        onPointerCancel={() => { down.current = false; if (keyed && !latched) { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); } }}
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
         style={{ touchAction: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
         aria-pressed={keyed}
         aria-label="push to talk"
-        className={`w-full rounded-md border py-8 text-[26px] font-bold uppercase tracking-[0.25em] transition-colors ${
+        className={`w-full rounded-md border px-2 py-3 text-[18px] font-bold uppercase transition-colors ${
           keyed
             ? "border-alert bg-alert/25 text-alert"
-            : "border-signal/60 bg-card/60 text-signal active:bg-signal/15"
+            : "border-signal/60 bg-signal/15 text-signal active:bg-signal/25"
         } ${disabled ? "opacity-40" : ""}`}
       >
         {label}
       </button>
-      <p className="mt-1 text-center text-[16px] uppercase tracking-wider text-muted-foreground">
+      <p className="mt-0.5 text-center text-[12px] uppercase text-muted-foreground">
         {keyed && remaining !== undefined
           ? `${remaining}s left`
           : hint || "hold · tap · or the side key on a rugged handset"}

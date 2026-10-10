@@ -19,7 +19,7 @@
  * 27 MHz radio through a cable jack stays in the clear.
  */
 
-import { CB_MAX, CB_MIN } from "@/lib/channels";
+import { CB_BUS_MAX, CB_MIN } from "@/lib/channels";
 import { packTriStarHeader } from "@/lib/engines/tristar-addressing";
 
 export type Room = {
@@ -41,7 +41,7 @@ const COORD_KEY = "apex.cb.coord";
 export function parseRoomId(id: string): { channel: number; branches: number[] } | null {
   const parts = id.split(".");
   const channel = Number(parts[0]);
-  if (!Number.isInteger(channel) || channel < CB_MIN || channel > CB_MAX) return null;
+  if (!Number.isInteger(channel) || channel < CB_MIN || channel > CB_BUS_MAX) return null;
   const branches = parts.slice(1).map(Number);
   if (branches.some((b) => !Number.isInteger(b) || b < 1 || b > 99)) return null;
   return { channel, branches };

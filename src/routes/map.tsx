@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
@@ -101,15 +102,7 @@ function ForecastMapRoute() {
 
   return (
     <main className="flex h-app flex-col overflow-hidden scan-grid face-pad pb-3 pt-2">
-      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <Link to="/forecast" search={{ lat, lon }} className="text-[10px] text-muted-foreground">
-          ‹
-        </Link>
-        <h1 className="truncate text-center text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
-          Forecast Map
-        </h1>
-        <span className="text-[7px] uppercase tracking-widest text-muted-foreground">leaflet</span>
-      </header>
+      <AppTopBar title="Forecast Map" backTo="/forecast" storageKey="map" />
 
       <div className="mt-2 rounded-sm border border-border bg-card/60 p-2 text-[8px] uppercase tracking-widest text-muted-foreground">
         tap to set location · {lat.toFixed(3)}, {lon.toFixed(3)}

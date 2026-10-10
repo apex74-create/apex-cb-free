@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { fetchWaveForecast, type WaveForecastResponse } from "@/services/forecastApi";
+import { sweepDevice, sweepParams, sweepSupported } from "@/lib/device-sensors";
 
 /**
  * Meteorologist briefing — the whole run on one printable sheet.
@@ -147,6 +148,12 @@ function synopsis(data: WaveForecastResponse): string[] {
     );
   }
 
+  const future = (data.turning_points ?? []).filter(p => p.kind === "peak" && p.iso >= new Date().toISOString().slice(0, 10)).slice(0, 5);
+  if (future.length) lines.push(`Projected turning-point peaks: ${future.map(p => `${longDate(p.iso.slice(0, 10))} ${triple(p.temp)}`).join("; ")}. These are model projections, not observations.`);
+  const nights = m.nightly_lows?.nights.filter(n => n.iso >= new Date().toISOString().slice(0, 10)).slice(0, 7) ?? [];
+  if (nights.length) lines.push(`Projected overnight shelter-height lows: ${nights.map(n => `${longDate(n.iso)} ${triple(n.low_f)}`).join("; ")}. Frost exposure at ground level may differ; these are not measured lows.`);
+  if (m.ternary) lines.push(`3/6/9 consensus: ${m.ternary.state} · ${m.ternary.label} · ${Math.round(m.ternary.agreement * 100)}% agreement from ${m.ternary.witnesses} witnesses.`);
+
   return lines;
 }
 
@@ -165,14 +172,30 @@ function BriefingRoute() {
   const lon = search.lon ?? DEFAULT_LON;
   const [data, setData] = useState<WaveForecastResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [issued, setIssued] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const [runDay, setRunDay] = useState(() => new Date().toISOString().slice(0, 10));
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const day = new Date().toISOString().slice(0, 10);
+      setRunDay(old => old === day ? old : day);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const abort = new AbortController();
-    fetchWaveForecast({ lat, lon, days: 62, past: 14, signal: abort.signal })
-      .then(setData)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : "briefing unavailable"));
+    setError(null);
+    setData(null);
+    setIssued(null);
+    void (async () => {
+      const sensor = sweepSupported() ? sweepParams(await sweepDevice()) : {};
+      const result = await fetchWaveForecast({ lat, lon, days: 365, past: 92, sensor, signal: abort.signal });
+      if (!abort.signal.aborted) { setData(result); setIssued(new Date().toISOString()); }
+    })().catch((e: unknown) => { if (!abort.signal.aborted) setError(e instanceof Error ? e.message : "briefing unavailable"); });
     return () => abort.abort();
-  }, [lat, lon]);
+  }, [lat, lon, refresh, runDay]);
 
   const lines = useMemo(() => (data ? synopsis(data) : []), [data]);
   const meta = data?.metadata;
@@ -189,17 +212,17 @@ function BriefingRoute() {
             Forecast Briefing
           </h1>
           <p className="mt-1 text-[9px] uppercase tracking-widest text-muted-foreground">
-            {lat.toFixed(3)}, {lon.toFixed(3)} · issued{" "}
-            {new Date().toISOString().slice(0, 16).replace("T", " ")} UTC
+            {lat.toFixed(3)}, {lon.toFixed(3)} · {issued ? `retrieved ${issued.slice(0, 16).replace("T", " ")} UTC` : "refreshing run"}
           </p>
         </div>
-        <button
+        <div className="flex gap-2 print:hidden"><button type="button" onClick={() => setRefresh(v => v + 1)} className="app-hbtn px-3 py-1.5 text-[9px] uppercase">Refresh</button><button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => { if (data && issued && !error && issued.slice(0, 10) === new Date().toISOString().slice(0, 10)) window.print(); }}
+          disabled={!data || !issued || !!error || issued.slice(0, 10) !== runDay}
           className="rounded-full border border-signal/60 bg-signal/10 px-3 py-1.5 text-[9px] uppercase tracking-widest text-signal print:hidden"
         >
           Print / PDF
-        </button>
+        </button></div>
       </header>
 
       {error ? (
@@ -210,6 +233,7 @@ function BriefingRoute() {
         </p>
       ) : (
         <>
+          {data?.notice ? <p className="mt-3 text-xs text-warn">{data.notice} · This run is degraded.</p> : null}
           <section className="mt-4">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.25em] text-scan">
               Synopsis

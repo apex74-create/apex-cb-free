@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { isCbPath } from "@/lib/cb-routes";
@@ -14,7 +15,9 @@ import { isCbPath } from "@/lib/cb-routes";
 export default function BackButton() {
   const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (isCbPath(pathname)) return null;
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => setEmbedded(window.self !== window.top), []);
+  if (embedded || isCbPath(pathname)) return null;
 
   const goBack = () => {
     const canGoBack =
@@ -31,7 +34,7 @@ export default function BackButton() {
       type="button"
       onClick={goBack}
       aria-label="Go back"
-      className="fixed left-1 top-1/2 z-50 grid h-9 min-w-9 -translate-y-1/2 place-items-center rounded-full border border-border bg-background/85 px-2 text-[11px] leading-none text-muted-foreground opacity-80 backdrop-blur-sm active:bg-accent"
+      className="fixed bottom-4 left-2 z-50 grid h-7 min-w-7 place-items-center rounded-full border border-border/60 bg-background/40 px-2 text-[10px] leading-none text-muted-foreground opacity-70 backdrop-blur-sm active:bg-accent"
     >
       ‹ back
     </Button>

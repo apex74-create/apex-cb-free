@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from "react";
  * four settings through a 400px face after every cold boot is unusable.
  */
 export type MapPrefs = {
-  basemap: "dark" | "sat";
+  basemap: "dark" | "sat" | "osm";
   /** tremor intensity overlay on the breadcrumb trail */
   tremor: boolean;
   /** shield explode-seek chain reaction */
@@ -44,7 +44,7 @@ export function loadPrefs(): MapPrefs {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_PREFS;
     const p = JSON.parse(raw) as Partial<MapPrefs>;
-    const basemap = p.basemap === "sat" ? "sat" : "dark";
+    const basemap = p.basemap === "sat" || p.basemap === "osm" ? p.basemap : "dark";
     return {
       basemap,
       tremor: p.tremor !== false,

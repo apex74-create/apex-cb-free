@@ -74,6 +74,10 @@ export default function InstallApp({ className = "" }: { className?: string }) {
           {note}
         </p>
       ) : null}
+      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground/70">
+        Installs are counted with an anonymous receipt — device type, language and broad region only.
+        No account, no location, no tracking.
+      </p>
     </div>
   );
 }

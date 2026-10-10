@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { daemonUrl, usePhoneLanIp } from "@/lib/lan-ip";
 import { useBridge } from "@/lib/bridge-context";
 import PcapReplay from "@/components/PcapReplay";
+import OperatorGate from "@/components/OperatorGate";
 import {
   consentWarning,
   DEFAULT_PCAP_SETTINGS,
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/pcap")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: PcapView,
+  component: () => <OperatorGate><PcapView /></OperatorGate>,
 });
 
 const MODES: { id: DumpMode; label: string }[] = [

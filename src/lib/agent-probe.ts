@@ -11,14 +11,15 @@
  * linear backoff, because a freshly started agent often loses the first dial.
  */
 
-import { parseFrame } from "./bridge";
+import { isBlockedWs, parseFrame } from "./bridge";
 
 export type ProbeFailure =
   | "blocked" // mixed content: HTTPS page cannot open ws://
   | "bad-url"
   | "refused" // socket never opened
   | "timeout" // opened (or not) but no hello inside the window
-  | "not-agent"; // something answered, but not our protocol
+  | "not-agent" // something answered, but not our protocol
+  | "unauthorized"; // agent answered but requires the configured token
 
 export type ProbeAttempt = {
   attempt: number;
@@ -53,6 +54,7 @@ const REASON: Record<ProbeFailure, string> = {
     "The socket opened but the agent never answered. Wrong port, wrong path, or the worker is wedged.",
   "not-agent":
     "Something answered but it is not the Apex agent. Another service is using that port.",
+  unauthorized: "The agent answered but rejected the token. Use the token shown by the agent at startup.",
 };
 
 export function isWsUrl(url: string): boolean {
@@ -65,15 +67,11 @@ export function isWsUrl(url: string): boolean {
 }
 
 function mixedBlocked(url: string): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.location.protocol === "https:" &&
-    url.startsWith("ws://")
-  );
+  return isBlockedWs(url);
 }
 
 /** Single bounded handshake attempt. */
-export function probeOnce(url: string, timeoutMs = 3000, attempt = 1): Promise<ProbeAttempt> {
+export function probeOnce(url: string, timeoutMs = 3000, attempt = 1, token = ""): Promise<ProbeAttempt> {
   const started = Date.now();
   const fail = (failure: ProbeFailure, detail?: string): ProbeAttempt => ({
     attempt,
@@ -113,13 +111,17 @@ export function probeOnce(url: string, timeoutMs = 3000, attempt = 1): Promise<P
 
     socket.onopen = () => {
       opened = true;
-      socket.send(JSON.stringify({ type: "hello", client: "apex-watch" }));
+      socket.send(JSON.stringify({ type: "hello", client: "apex-watch", ...(token ? { token } : {}) }));
     };
     socket.onerror = () => finish(fail(opened ? "timeout" : "refused"));
     socket.onclose = () => finish(fail(opened ? "not-agent" : "refused"));
     socket.onmessage = (event) => {
       const frame = parseFrame(String(event.data));
       if (!frame) return;
+      if (frame.type === "error" && /token|unauthenticated/i.test(frame.message)) {
+        finish(fail("unauthorized"));
+        return;
+      }
       if (frame.type !== "hello") {
         finish(fail("not-agent", frame.type));
         return;
@@ -145,14 +147,15 @@ export async function probeWithRetry(
     backoffMs?: number;
     onAttempt?: (attempt: ProbeAttempt) => void;
     signal?: AbortSignal;
+    token?: string;
   } = {},
 ): Promise<ProbeResult> {
-  const { timeoutMs = 3000, retries = 2, backoffMs = 700, onAttempt, signal } = opts;
+  const { timeoutMs = 3000, retries = 2, backoffMs = 700, onAttempt, signal, token = "" } = opts;
   const attempts: ProbeAttempt[] = [];
 
   for (let i = 1; i <= retries + 1; i++) {
     if (signal?.aborted) break;
-    const attempt = await probeOnce(url, timeoutMs, i);
+    const attempt = await probeOnce(url, timeoutMs, i, token);
     attempts.push(attempt);
     onAttempt?.(attempt);
     if (attempt.ok) {
@@ -167,7 +170,7 @@ export async function probeWithRetry(
       };
     }
     // Retrying a blocked or malformed URL can never succeed.
-    if (attempt.failure === "blocked" || attempt.failure === "bad-url") break;
+    if (attempt.failure === "blocked" || attempt.failure === "bad-url" || attempt.failure === "unauthorized") break;
     if (i <= retries && !signal?.aborted) {
       await new Promise((r) => setTimeout(r, backoffMs * i));
     }

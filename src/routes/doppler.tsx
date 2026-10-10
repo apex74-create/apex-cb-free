@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 
@@ -68,6 +69,12 @@ function DopplerRoute() {
         7,
       );
       mapRef.current = map;
+      // Leaflet caches its first viewport. The drawer iframe and fullscreen
+      // mode both resize after the map mounts, so refresh tile bounds then.
+      const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+      observer.observe(hostRef.current);
+      const onFullscreen = () => window.setTimeout(() => map.invalidateSize({ pan: false }), 100);
+      document.addEventListener("fullscreenchange", onFullscreen);
       // Keyless base map. The Carto dark tiles now watermark "API key required",
       // so the standard OSM tiles are used and darkened in CSS instead — no
       // account, no key, nothing to expire.
@@ -84,6 +91,8 @@ function DopplerRoute() {
       }).addTo(map);
 
       dispose = () => {
+        observer.disconnect();
+        document.removeEventListener("fullscreenchange", onFullscreen);
         layersRef.current.clear();
         mapRef.current = null;
         map.remove();
@@ -140,6 +149,8 @@ function DopplerRoute() {
           opacity: 0,
           zIndex: f.nowcast ? 420 : 410,
           maxZoom: 14,
+          // The free radar cache only renders up to zoom 7; deeper zooms upscale those tiles instead of leaving blank blocks.
+          maxNativeZoom: 7,
         });
         layer.addTo(map);
         layersRef.current.set(f.path, layer);
@@ -172,21 +183,15 @@ function DopplerRoute() {
 
   return (
     <main className="flex h-app flex-col overflow-hidden scan-grid face-pad pb-3 pt-2">
-      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <Link to="/forecast" search={{ lat, lon }} className="text-[10px] text-muted-foreground">
-          ‹
-        </Link>
-        <h1 className="truncate text-center text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
-          Doppler Radar
-        </h1>
+      <AppTopBar title="Doppler Radar" backTo="/forecast" storageKey="doppler">
         <span
-          className={`text-[7px] uppercase tracking-widest ${
+          className={`px-1 text-[8px] uppercase tracking-widest ${
             frame?.nowcast ? "text-warn" : "text-scan"
           }`}
         >
           {frame?.nowcast ? "nowcast" : "observed"}
         </span>
-      </header>
+      </AppTopBar>
 
       <div className="mt-2 rounded-sm border border-border bg-card/60 px-2 py-1 text-[8px] uppercase tracking-widest text-muted-foreground">
         {error ? `radar offline · ${error}` : `frame ${index + 1}/${frames.length || 1} · ${stamp}`}

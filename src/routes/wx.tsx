@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 
 /**
  * Enphase Operator — the weather app's own front door.
@@ -27,6 +28,10 @@ export const Route = createFileRoute("/wx")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [
+      { rel: "icon", type: "image/png", href: "/icons/wx-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/wx-192.png" },
+    ],
   }),
 });
 
@@ -40,8 +45,9 @@ const TILES = [
 
 function WeatherHome() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-6">
-      <header className="rounded-sm border border-border bg-card/60 p-4">
+    <main className="relative mx-auto w-full max-w-2xl px-4 py-6">
+      <AppTopBar title="Enphase Operator" backTo="/" storageKey="wx" />
+      <header className="mt-4 rounded-sm border border-border bg-card/60 p-4">
         <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
           Apex Air Solutions
         </p>

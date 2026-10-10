@@ -1,3 +1,5 @@
+import { createPortalSession } from "@/utils/payments.functions";
+import { getStripeEnvironment, paymentsConfigured } from "@/lib/stripe";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -69,6 +71,27 @@ function AccountPage() {
             className="mt-2 rounded-sm border border-border px-3 py-1 text-[10px] uppercase tracking-widest text-muted-foreground hover:border-scan hover:text-scan"
           >
             Move to a new device
+          </button>
+        ) : null}
+        {session && paymentsConfigured() ? (
+          <button
+            type="button"
+            onClick={async () => {
+              const tab = window.open("", "_blank");
+              const r = await createPortalSession({
+                data: { returnUrl: window.location.href, environment: getStripeEnvironment() },
+              });
+              if ("error" in r) {
+                tab?.close();
+                alert(r.error);
+                return;
+              }
+              if (tab) tab.location.href = r.url;
+              else window.location.href = r.url;
+            }}
+            className="ml-2 mt-2 rounded-sm border border-signal/60 px-3 py-1 text-[10px] uppercase tracking-widest text-signal hover:bg-signal/10"
+          >
+            Manage billing
           </button>
         ) : null}
         <div className="mt-3 flex flex-wrap gap-2">

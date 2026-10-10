@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BridgeGate } from "@/components/BridgeGate";
 import { useBridge } from "@/lib/bridge-context";
@@ -286,17 +287,7 @@ function NetchatView() {
 
   return (
     <main className="relative flex h-app w-full flex-col overflow-hidden bg-background">
-      <header className="z-10 grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background/90 face-pad py-1.5">
-        <Link
-          to="/app"
-          aria-label="Back to gallery"
-          className="shrink-0 px-1 text-[12px] leading-none text-muted-foreground active:text-signal"
-        >
-          ‹
-        </Link>
-        <h1 className="min-w-0 truncate text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
-          NETCHAT · RNS
-        </h1>
+      <AppTopBar title="Netchat · RNS" backTo="/app" storageKey="netchat">
         <button
           type="button"
           onClick={() =>
@@ -304,11 +295,11 @@ function NetchatView() {
               t === "chat" ? "mesh" : t === "mesh" ? "fm" : t === "fm" ? "token" : "chat",
             )
           }
-          className="shrink-0 rounded-sm border border-border px-1 text-[8px] uppercase tracking-widest text-muted-foreground active:text-signal"
+          className="app-hbtn h-8 shrink-0 rounded-sm px-1.5 text-[11px] uppercase tracking-widest text-signal"
         >
           {tab === "chat" ? "mesh" : tab === "mesh" ? "fm" : tab === "fm" ? "token" : "chat"}
         </button>
-      </header>
+      </AppTopBar>
 
       <div className="z-10 shrink-0 border-b border-border face-pad py-1">
         <span

@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isGrantAll } from "@/lib/entitlement";
+import { OPERATOR_PACKAGE_SLUGS } from "@/lib/operator-slugs";
 
 const Proof = z.object({
   pub: z.string().min(40).max(400),
@@ -11,14 +13,15 @@ const Proof = z.object({
 
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-/** Devices allowed per account: more for crew/grant-all plans. */
+/** Devices allowed per account: owner/full-stack grants cover a household fleet. */
 function deviceLimit(slugs: string[]) {
-  if (slugs.some((s) => ["crew", "apex-full-stack", "apex-full-stack-monthly", "tremor-full", "operator-field"].includes(s))) return 5;
+  if (slugs.some(isGrantAll)) return 25;
+  if (slugs.some((s) => ["crew", "operator-field"].includes(s))) return 5;
   return 2;
 }
 
 async function verify(userId: string, p: z.infer<typeof Proof>) {
-  if (Math.abs(Date.now() - p.ts) > 120_000) return false;
+  if (Math.abs(Date.now() - p.ts) > 15 * 60_000) return false;
   try {
     const key = await crypto.subtle.importKey("spki", unb64(p.pub), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
     return crypto.subtle.verify(
@@ -45,10 +48,15 @@ export const verifiedLicences = createServerFn({ method: "POST" })
     if (!(await verify(context.userId, data))) return empty;
     const { data: held } = await context.supabase
       .from("licences")
-      .select("product_slug")
+      .select("product_slug, expires_at, order_ref")
       .eq("user_id", context.userId)
       .eq("status", "active");
-    const slugs = (held ?? []).map((l) => l.product_slug);
+    const now = Date.now();
+    const active = (held ?? []).filter((l) => !l.expires_at || Date.parse(l.expires_at) > now);
+    // Historic all-access checkouts created one row per product. Those
+    // inherited rows do not count as a separately purchased operator licence.
+    const bundleOrders = new Set(active.filter((l) => isGrantAll(l.product_slug) && l.order_ref).map((l) => l.order_ref));
+    const slugs = active.filter((l) => !OPERATOR_PACKAGE_SLUGS.includes(l.product_slug) || !l.order_ref || !bundleOrders.has(l.order_ref)).map((l) => l.product_slug);
     if (!slugs.length) return { slugs, status: "ok" as const };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

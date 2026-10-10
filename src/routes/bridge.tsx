@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { COMMANDS } from "@/lib/adb-commands";
-import { KIND_LABEL } from "@/lib/bridge";
+import { KIND_LABEL, consumePairingLink } from "@/lib/bridge";
 import { toneClass, toneBorder } from "@/lib/tools";
 import { useBridge } from "@/lib/bridge-context";
 import BridgeSettings from "@/components/BridgeSettings";
@@ -9,6 +9,7 @@ import AmbientPanel from "@/components/AmbientPanel";
 import BlePanel from "@/components/BlePanel";
 import OneTapLink from "@/components/OneTapLink";
 import MeshNodePanel from "@/components/MeshNodePanel";
+import OperatorGate from "@/components/OperatorGate";
 import SessionExport from "@/components/SessionExport";
 import WifiPanel from "@/components/WifiPanel";
 
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/bridge")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: BridgeView,
+  component: () => <OperatorGate><BridgeView /></OperatorGate>,
 });
 
 const stateTone = {
@@ -60,7 +61,18 @@ function BridgeView() {
     findDevice,
     retryNow,
     clearLog,
+    autoLink,
   } = useBridge();
+
+  // Phone installer opens /bridge#pair=<token>: save it and dial straight away.
+  useEffect(() => {
+    const paired = consumePairingLink(endpoints);
+    if (!paired) return;
+    setEndpoints(paired);
+    const t = setTimeout(() => void autoLink(), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [tab, setTab] = useState<"deck" | "log">("deck");
   const [settingsOpen, setSettingsOpen] = useState(false);

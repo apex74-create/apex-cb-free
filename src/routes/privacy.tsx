@@ -50,6 +50,10 @@ const SECTIONS = [
     body: "When you publish content with the Netlify option enabled, the server sends the minimum post metadata needed to trigger the configured Netlify build hook. Android download listings are driven by the release manifest and only expose files that have actually been uploaded.",
   },
   {
+    title: "Free install count",
+    body: "When a browser reports installation of the free web app, we save a random receipt in that browser and one receipt in the database to avoid counting the same browser twice. The public counter shows the reported total, not a verified count of distinct people. These receipts do not contain your account, name, location, or device details. This is not a count of visitors, APK downloads, or installations made outside this site. Clearing browser storage can lead to another count on a later install.",
+  },
+  {
     title: "Your choices",
     body: "You can avoid saving drafts, avoid entering manual notes, and skip bridge connections if you only want to use the live web interface. If you need support or want data removed from your saved content records, use the support link shown in the app and store listing.",
   },

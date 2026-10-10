@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -140,14 +141,7 @@ function AstroPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
-      <header className="flex flex-wrap items-center gap-3">
-        <Link to="/wx" className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          ‹ Enphase Operator
-        </Link>
-        <h1 className="text-sm font-bold uppercase tracking-[0.25em] text-signal">
-          Solar · Lunar · Seismic
-        </h1>
-      </header>
+      <AppTopBar title="Solar · Lunar · Seismic" backTo="/wx" storageKey="astro" />
 
       <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
         Daily sunlight, the moon term and the energy released by nearby ground movement, drawn

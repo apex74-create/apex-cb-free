@@ -87,7 +87,7 @@ function Auth() {
     <main className="flex h-app flex-col overflow-hidden scan-grid">
       <header className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border-b border-border face-pad py-1">
         <Link
-          to="/app"
+          to="/"
           aria-label="Back"
           className="text-[10px] leading-none text-muted-foreground active:text-signal"
         >

@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { canRecord, loadCallsign, MAX_KEY_MS, openMic, tune, type PttTx } from "@/lib/ptt";
-import { chirp, tailStatic, tapHaptic } from "@/lib/cb-feedback";
+import { chirp, tailStatic, tapHaptic, prestageCadenceAudio } from "@/lib/cb-feedback";
 import { CB_ROUTES } from "@/lib/cb-routes";
 import { RadialKnob } from "@/components/RadialKnob";
 import { playRx, RX_MAX, setLevel, useLevels } from "@/lib/cb-audio-levels";
+import { setKeepAliveInfo, startKeepAlive, stopKeepAlive } from "@/lib/media-session";
 
 /**
  * Wrist Radio: the watch-face PTT target. One still screen on the same radio
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/wcb")({
 
 const CH_KEY = "apex.wcb.ch";
 
-function WristCb() {
+export function WristCb({ embedded = false }: { embedded?: boolean }) {
   const [ch, setCh] = useState(19);
   const [state, setState] = useState<"joining" | "live" | "down">("joining");
   const [last, setLast] = useState<PttTx | null>(null);
@@ -47,26 +48,76 @@ function WristCb() {
 
   useEffect(() => {
     try { localStorage.setItem(CH_KEY, String(ch)); } catch { /* locked */ }
-    const t = tune(
-      ch,
-      (tx) => {
-        setLast(tx);
-        if (tx.kind === "voice" && tx.body.startsWith("data:audio/")) {
-          const a = playRx(tx.body);
-          a.onended = () => tailStatic();
-          void a.play().catch(() => {});
-        }
-      },
-      setState,
-    );
-    txRef.current = t.transmit;
-    return () => { txRef.current = null; t.leave(); };
+    // Let the wrist panel paint before the relay creates its socket. A radio
+    // cannot pulse its receiver without missing calls between pulses, so keep
+    // the shared tune() reconnect/heartbeat behavior once listening begins.
+    let cancelled = false;
+    let session: ReturnType<typeof tune> | null = null;
+    let timer: number | null = null;
+    setState("joining");
+    const start = () => {
+      if (cancelled || document.visibilityState !== "visible" || session) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        if (cancelled || document.visibilityState !== "visible") return;
+        session = tune(
+          ch,
+          (tx) => {
+            setLast(tx);
+            if (tx.kind === "voice" && tx.body.startsWith("data:audio/")) {
+              const a = playRx(tx.body);
+              a.onended = () => tailStatic();
+              void a.play().catch(() => {});
+            }
+          },
+          setState,
+        );
+        txRef.current = session.transmit;
+      }, 350);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && timer === null) start();
+    };
+    // First animation frame commits the panel; the next allows a visible paint.
+    const frame = requestAnimationFrame(() => requestAnimationFrame(start));
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      document.removeEventListener("visibilitychange", onVisible);
+      if (timer !== null) clearTimeout(timer);
+      txRef.current = null;
+      session?.leave();
+    };
   }, [ch]);
 
-  const step = (d: number) => { tapHaptic(); setCh((c) => ((c - 1 + d + 40) % 40) + 1); };
+  /* Background keep-alive: first wrist gesture arms the silent media session
+   * so the receiver keeps running with the screen off or another app in front. */
+  const keepAliveRef = useRef(false);
+  const armKeepAlive = () => {
+    if (keepAliveRef.current) return;
+    keepAliveRef.current = true;
+    void startKeepAlive({
+      channelUp: () => stepRef.current(1),
+      channelDown: () => stepRef.current(-1),
+      monitor: () => {},
+    });
+  };
+  const stepRef = useRef<(d: number) => void>(() => {});
+
+  const step = (d: number) => { armKeepAlive(); tapHaptic(); setCh((c) => ((c - 1 + d + 40) % 40) + 1); };
+  stepRef.current = step;
+
+  useEffect(() => {
+    setKeepAliveInfo(String(ch), "wrist CB · monitoring");
+  }, [ch]);
+
+  useEffect(() => () => stopKeepAlive(), []);
+  useEffect(() => prestageCadenceAudio(), []);
 
   const down = async () => {
     if (keyed) return;
+    armKeepAlive();
     setKeyed(true);
     tapHaptic(20);
     chirp();
@@ -159,16 +210,16 @@ function WristCb() {
   const thick = "rounded-xl border-[3px] border-warn";
 
   return (
-    <main className="flex h-app w-full select-none flex-col bg-background p-2 text-foreground" style={{ touchAction: "manipulation" }}>
+    <main className={`flex w-full select-none flex-col bg-background p-2 text-foreground ${embedded ? "h-full" : "h-app"}`} style={{ touchAction: "manipulation" }}>
       <header className="flex items-center justify-between">
-        <a href={CB_ROUTES.face} className={`${thick} px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-warn`}>Face</a>
+        {embedded ? <span className="w-10" /> : <a href={CB_ROUTES.face} className={`${thick} px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-warn`}>Face</a>}
         <div className="text-center leading-none">
           <div className="text-[13px] font-black uppercase tracking-[0.2em] text-warn">Wrist Radio</div>
           <div className={`mt-0.5 text-[9px] font-bold uppercase tracking-widest ${state === "live" ? "text-signal" : "text-warn"}`}>
             {state === "live" ? "● on air" : state === "joining" ? "○ tuning" : "○ reconnecting"}
           </div>
         </div>
-        <a href={CB_ROUTES.radio} className={`${thick} px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-warn`}>Full</a>
+        {embedded ? <span className="w-10" /> : <a href={CB_ROUTES.radio} className={`${thick} px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-warn`}>Full</a>}
       </header>
       <div className={`mt-2 flex items-center justify-between gap-2 ${thick} bg-card p-2`}>
         <button type="button" onClick={() => step(-1)} className={`${thick} h-12 w-12 text-2xl font-black text-warn`} aria-label="Channel down">−</button>

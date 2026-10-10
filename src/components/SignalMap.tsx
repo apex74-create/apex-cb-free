@@ -39,11 +39,12 @@ type Fix = { lat: number; lon: number; acc: number; at: number };
 
 /** Same basemap set the phone PWA ships, so a map looks identical on either build. */
 const BASEMAPS = {
-  dark: { label: "dark", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" },
   sat: {
     label: "sat",
     url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   },
+  osm: { label: "osm", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" },
+  dark: { label: "dark", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png" },
 } as const;
 type BasemapKey = keyof typeof BASEMAPS;
 
@@ -56,7 +57,22 @@ type BasemapKey = keyof typeof BASEMAPS;
  * A scan result carries RSSI but no bearing, so an access point is drawn as a
  * distance ring around the fix (log-distance path loss), never as a fake point.
  */
-export default function SignalMap({ tool }: { tool: Tool }) {
+export type MapReading = {
+  id: number | string;
+  source: "pcap" | "cyd";
+  ssid: string | null;
+  bssid: string | null;
+  rssi: number | null;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  observed_at: string;
+};
+
+const READING_COLOR: Record<MapReading["source"], string> = { pcap: "#ffaa00", cyd: "#00ccff" };
+const esc = (v: string) => v.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+export default function SignalMap({ tool, basic = false, readings }: { tool: Tool; basic?: boolean; readings?: MapReading[] | undefined }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const layerRef = useRef<import("leaflet").LayerGroup | null>(null);
@@ -66,6 +82,9 @@ export default function SignalMap({ tool }: { tool: Tool }) {
   const [gpsError, setGpsError] = useState<string | null>(null);
   /** Super Bumbershoot self-location — used whenever the GPS has nothing. */
   const [selfFix, setSelfFix] = useState<SelfFix | null>(null);
+  /** Bumbershoot estimate breadcrumb — the solver's own trail, kept separate
+   * from the GPS trail so measured and estimated never blend on screen. */
+  const [selfTrail, setSelfTrail] = useState<SelfFix[]>([]);
   /** Coarse seed position — guarantees the map lands somewhere real from main. */
   const [seedPos, setSeedPos] = useState<{ lat: number; lon: number } | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -90,6 +109,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
     "shell cmd wifi list-scan-results",
     parseScanResults,
     isTrail ? 0 : 8000,
+    !basic,
   );
 
   /**
@@ -128,6 +148,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
   useEffect(() => {
     if (!hydrated) return; // wait for stored zoom/basemap so we boot once, correctly
     let cancelled = false;
+    let resizeTimer = 0;
     (async () => {
       const L = (await import("leaflet")).default;
       await import("leaflet/dist/leaflet.css");
@@ -146,7 +167,13 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         markerZoomAnimation: !profile.vectorOnly,
         preferCanvas: false,
       });
-      setZoomLevel(startZoom);
+      // Never zoom out past world coverage: a tall container at zoom 2 shows
+      // empty grey bands above and below the map. Floor the zoom at whatever
+      // fits the world in this container.
+      const worldZoom = map.getBoundsZoom([[-85, -180], [85, 180]]);
+      map.setMinZoom(worldZoom);
+      if (map.getZoom() < worldZoom) map.setZoom(worldZoom);
+      setZoomLevel(map.getZoom());
       const tiles = L.tileLayer(BASEMAPS[basemapRef.current].url, { maxZoom: 19 }).addTo(map);
       tileRef.current = tiles;
       let loaded = 0;
@@ -169,15 +196,21 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         setZoomLevel(z);
         update("zoom", z);
       });
-      setTimeout(() => map.invalidateSize(), 60);
+      resizeTimer = window.setTimeout(() => {
+        if (!cancelled && mapRef.current === map) map.invalidateSize();
+      }, 60);
+      // Keep the resize tied to the live map: rapidly switching shield views
+      // must not ask Leaflet to animate an already removed container.
       if (!cancelled) setMapReady(true);
       reportMap({ tool: tool.key, ready: true, tilesLoaded: 0, tileErrors: 0 });
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(resizeTimer);
       setMapReady(false);
       mapRef.current?.remove();
       mapRef.current = null;
+      readingsLayerRef.current = null;
       layerRef.current = null;
       resetMap();
     };
@@ -277,7 +310,20 @@ export default function SignalMap({ tool }: { tool: Tool }) {
    * instead of hanging on the world view.
    */
   useEffect(() => {
-    const read = () => setSelfFix(getSelfFix());
+    const read = () => {
+      const sf = getSelfFix();
+      setSelfFix(sf);
+      // Lay a bumbershoot crumb when the estimate moves — capped, and only
+      // when it actually shifted, so a parked device doesn't stack duplicates.
+      if (sf) {
+        setSelfTrail((prev) => {
+          const last = prev[prev.length - 1];
+          if (last && last.ts === sf.ts) return prev;
+          if (last && distanceMeters(last, sf) < 3) return prev;
+          return [...prev.slice(-199), sf];
+        });
+      }
+    };
     read();
     const stop = subscribeSelfFix(read);
     const t = window.setInterval(read, 5000);
@@ -308,6 +354,37 @@ export default function SignalMap({ tool }: { tool: Tool }) {
     tiles.bringToBack();
     tileRef.current = tiles;
   }, [basemap, mapReady]);
+
+  /** Source-labeled readings layer: only rows that carry a reported position are drawn. */
+  const readingsLayerRef = useRef<import("leaflet").LayerGroup | null>(null);
+  useEffect(() => {
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!mapReady || !L || !map || !readings) return;
+    if (!readingsLayerRef.current) readingsLayerRef.current = L.layerGroup().addTo(map);
+    const layer = readingsLayerRef.current;
+    layer.clearLayers();
+    const pts = readings.filter((r) => r.lat !== null && r.lng !== null);
+    pts.forEach((r) => {
+      const c = READING_COLOR[r.source];
+      const at: [number, number] = [r.lat!, r.lng!];
+      if (r.accuracy_m && r.accuracy_m > 0) {
+        L.circle(at, { radius: r.accuracy_m, color: c, weight: 0.8, opacity: 0.5, fillOpacity: 0.06, interactive: false }).addTo(layer);
+      }
+      if (fix) L.polyline([[fix.lat, fix.lon], at], { color: c, weight: 0.7, opacity: 0.35, dashArray: "3 5", interactive: false }).addTo(layer);
+      L.circleMarker(at, { radius: 5, color: c, weight: 1.5, fillColor: c, fillOpacity: 0.7 })
+        .bindPopup(
+          `<div style="font-family:monospace;font-size:11px;line-height:1.4">` +
+            `<b>${esc(r.ssid ?? "<hidden>")}</b><br/>` +
+            `source: ${r.source.toUpperCase()}<br/>` +
+            (r.bssid ? `bssid: ${esc(r.bssid)}<br/>` : "") +
+            (r.rssi !== null ? `rssi: ${r.rssi} dBm<br/>` : "") +
+            `accuracy: ${r.accuracy_m ? `±${Math.round(r.accuracy_m)} m` : "not reported"}<br/>` +
+            `last seen: ${esc(new Date(r.observed_at).toLocaleString())}</div>`,
+        )
+        .addTo(layer);
+    });
+  }, [readings, mapReady, fix]);
 
   /**
    * Draw pass. The overlay geometry (mesh graticule, spear bearings, stack
@@ -371,7 +448,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
 
       /* ---- overlay scaffold: always visible, derived from the fix ---- */
       const overlay = tool.overlay;
-      if (overlay === "mesh") {
+       if (overlay === "mesh" && !basic && aps.length > 0) {
         meshGrid(anchor, 400, 8).forEach((line) =>
           L.polyline(line, {
             color: hex,
@@ -381,14 +458,14 @@ export default function SignalMap({ tool }: { tool: Tool }) {
           }).addTo(layer),
         );
       }
-      if (overlay === "tetra") {
+       if (overlay === "tetra" && !basic && aps.length > 0) {
         spearLegs(anchor, 260).forEach(({ line, bearing }) =>
           L.polyline(line, { color: hex, weight: 1.4, opacity: 0.8 * op, interactive: false })
             .addTo(layer)
             .bindTooltip(`spear ${bearing.toFixed(0)}°`),
         );
       }
-      if (overlay === "stack" || overlay === "rf") {
+       if (!basic && aps.length > 0 && (overlay === "stack" || overlay === "rf")) {
         stackRings(50, 5).forEach((r) =>
           L.circle(center, {
             radius: r,
@@ -406,7 +483,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
        * approximated with three CSS-animated vector rings — cheap enough for
        * the AOSP compositor, still shows the sweep.
        */
-      if (prefs.explode && profile.vectorOnly) {
+       if (!basic && prefs.explode && profile.vectorOnly && hops.length > 0) {
         [40, 90, 150].forEach((r, i) =>
           L.circle(center, {
             radius: r,
@@ -472,6 +549,37 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         }).addTo(layer);
       }
 
+      /* Bumbershoot trail — the solver's estimated breadcrumb, drawn dashed
+       * in amber so it can never be mistaken for the measured GPS trail.
+       * Lets you walk in satellite mode and watch the estimate resolve
+       * against where the satellites say you actually went. */
+      if (selfTrail.length > 1) {
+        L.polyline(
+          selfTrail.map((p) => [p.lat, p.lon] as [number, number]),
+          {
+            color: "#ffb020",
+            weight: 1.5,
+            opacity: 0.55 * op,
+            dashArray: "5 6",
+            interactive: false,
+          },
+        ).addTo(layer);
+        selfTrail.forEach((p) => {
+          L.circleMarker([p.lat, p.lon], {
+            radius: 3,
+            color: "#ffb020",
+            weight: 1,
+            dashArray: "2 3",
+            fill: false,
+            opacity: 0.7 * op,
+          })
+            .addTo(layer)
+            .bindTooltip(
+              `BUMBERSHOOT EST · ±${Math.round(p.sigma)}m · ${p.anchors} anchors · ${new Date(p.ts).toLocaleTimeString()}`,
+            );
+        });
+      }
+
       /* ---- Tremor intensity field -------------------------------------
        * Renders on every overlay mode, not just the breadcrumb tool: a
        * graded segment per hop plus a soft intensity blob at each sample so
@@ -531,6 +639,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
     });
   }, [
     aps,
+    basic,
     fix,
     hops,
     isTrail,
@@ -542,6 +651,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
     prefs.zoom,
     profile.vectorOnly,
     selfFix,
+    selfTrail,
     seedPos,
     trail,
     tool.tone,
@@ -577,21 +687,22 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         ? `gps: ${gpsError}`
         : "waiting for gps";
 
-  const blocked = !isTrail && !!scan.error;
+   const blocked = !basic && !isTrail && !!scan.error;
   const showLegend = prefs.tremor && legend && hops.length > 0;
+  const placed = (readings ?? []).filter((r) => r.lat !== null && r.lng !== null);
 
   return (
-    <div className={`absolute inset-0 ${basemap === "sat" ? "apex-map-sat" : "apex-map-dark"}`}>
+    <div className={`absolute inset-0 ${basemap === "sat" ? "apex-map-sat" : basemap === "osm" ? "apex-map-osm" : "apex-map-dark"}`}>
       <div ref={ref} className="absolute inset-0" />
 
-      <MapFxCanvas
+       {!basic && <MapFxCanvas
         map={mapReady ? mapRef.current : null}
         origin={fix}
         points={fxPoints}
         explode={prefs.explode}
         ir={prefs.ir}
         opacity={prefs.opacity}
-      />
+       />}
 
       {blocked ? (
         <div className="pointer-events-none absolute inset-x-0 top-0 bg-background/85 p-2 text-center">
@@ -621,6 +732,13 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         {chrome ? "×" : "≡"}
       </button>
 
+      {readings ? (
+        <div className="pointer-events-none absolute bottom-2 left-2 z-[500] rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-[10px] text-muted-foreground">
+          <div><span style={{ color: READING_COLOR.cyd }}>●</span> CYD reading · <span style={{ color: READING_COLOR.pcap }}>●</span> PCAP relay</div>
+          <div>{placed.length} placed · {readings.length - placed.length} without position (not drawn)</div>
+        </div>
+      ) : null}
+
       {showLegend ? (
         <div className="absolute left-1.5 top-9 z-[500] max-w-[58%]">
           <TremorLegend hops={hops} compact={profile.vectorOnly} onClose={() => setLegend(false)} />
@@ -632,7 +750,7 @@ export default function SignalMap({ tool }: { tool: Tool }) {
         hidden={!chrome}
         className="pointer-events-auto absolute inset-x-2 bottom-10 z-[500] grid grid-cols-4 gap-1 rounded-md border border-border bg-background/95 p-2 shadow-lg"
       >
-        <div className="col-span-2 grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background">
+        <div className="col-span-2 grid grid-cols-3 overflow-hidden rounded-md border border-border bg-background">
           {(Object.keys(BASEMAPS) as BasemapKey[]).map((k) => (
             <button
               key={k}

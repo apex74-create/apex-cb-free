@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useEffect, useMemo, useState } from "react";
 import ForecastChart from "@/components/ForecastChart";
 import { fck } from "@/lib/temp";
@@ -19,6 +20,7 @@ import {
   type WaveTimelinePoint,
 } from "@/services/forecastApi";
 import { lastStationBlend } from "@/services/forecastApi";
+import { StudyCheckin } from "@/components/StudyCheckin";
 
 type ForecastSearch = { lat?: number | undefined; lon?: number | undefined };
 
@@ -194,7 +196,8 @@ function ForecastRoute() {
     void sweepDevice().then((reading) => {
       if (cancelled) return;
       const params = sweepParams(reading);
-      setSweep(params);
+      // Only refetch when the reading actually changed.
+      setSweep((prev) => (JSON.stringify(prev) === JSON.stringify(params) ? prev : params));
       setSweepState(Object.keys(params).length ? "on" : "none");
       // Every install is a station: hand the same reading to the shared array
       // so the next forecast for this area is measured, not just modelled.
@@ -215,10 +218,15 @@ function ForecastRoute() {
     const abort = new AbortController();
     setLoading(true);
     setError(null);
+    // The previous forecast stays painted while this refresh runs.
     void fetchWaveForecast({ lat, lon, days: 365, past: MEASURED_HISTORY_DAYS, sensor: sweep, signal: abort.signal })
-      .then((res) => setData(res))
+      .then((res) => {
+        if (!abort.signal.aborted) setData(res);
+      })
       .catch((err: unknown) => {
         if (abort.signal.aborted) return;
+        if (err instanceof Error && err.name === "AbortError") return;
+        if (/aborted/i.test(err instanceof Error ? err.message : "")) return;
         setError(err instanceof Error ? err.message : "forecast unavailable");
       })
       .finally(() => {
@@ -267,18 +275,7 @@ function ForecastRoute() {
 
   return (
     <main className="no-scrollbar min-h-app overflow-y-auto scan-grid face-pad pb-6 pt-2">
-      <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <Link to="/" className="text-[10px] text-muted-foreground">
-          ‹
-        </Link>
-        <div className="min-w-0 text-center">
-          <h1 className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-signal">
-            Enphase Operator
-          </h1>
-          <p className="truncate text-[7px] uppercase tracking-[0.25em] text-muted-foreground">
-            wave collapse · v4.2
-          </p>
-        </div>
+      <AppTopBar title="Enphase Operator" subtitle="wave collapse · v4.2" backTo="/wx" storageKey="forecast">
         <span
           className={`shrink-0 rounded-sm border px-1.5 py-0.5 text-[7px] uppercase tracking-widest ${
             streamLive ? "animate-pulse border-signal/60 text-signal" : "border-warn/60 text-warn"
@@ -286,7 +283,7 @@ function ForecastRoute() {
         >
           {streamLive ? "stream active" : "degraded"}
         </span>
-      </header>
+      </AppTopBar>
 
       <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-4">
         <Link
@@ -329,11 +326,24 @@ function ForecastRoute() {
       </div>
 
 
-      {loading ? (
-        <p className="mt-3 text-[9px] uppercase tracking-widest text-muted-foreground">
-          crunching wave synthesis…
+      {meta && (loading || error) ? (
+        <p className="mt-3 text-[8px] uppercase tracking-widest text-muted-foreground">
+          {loading ? "refreshing…" : "showing last reading"}
         </p>
-      ) : error ? (
+      ) : null}
+      {loading && !meta ? (
+        <section className="mt-2 grid grid-cols-2 gap-1" aria-label="Forecast loading">
+          {["finite peak target", "held window", "seasonal normal", "confidence"].map((label) => (
+            <div key={label} className="rounded-sm border border-border bg-card/60 p-3">
+              <p className="text-[8px] uppercase tracking-widest text-muted-foreground">{label}</p>
+              <p className="mt-2 h-5 w-2/3 animate-pulse rounded-sm bg-muted" />
+            </div>
+          ))}
+          <p className="col-span-2 mt-1 text-[9px] uppercase tracking-widest text-muted-foreground">
+            crunching wave synthesis…
+          </p>
+        </section>
+      ) : error && !meta ? (
         <p className="mt-3 rounded-sm border border-alert/50 bg-card/60 px-2 py-2 text-[8px] uppercase tracking-widest text-alert">
           {error}
         </p>
@@ -343,6 +353,7 @@ function ForecastRoute() {
         </p>
       ) : (
         <>
+          <StudyCheckin />
           <section className="mt-2 grid grid-cols-2 gap-1">
             <Kpi
               label="finite peak target"

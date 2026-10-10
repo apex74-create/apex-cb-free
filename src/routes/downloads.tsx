@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import InstallApp from "@/components/InstallApp";
+import FreeInstallCount from "@/components/FreeInstallCount";
 import { Button } from "@/components/ui/button";
 import {
   loadBuildsManifest,
@@ -106,7 +107,7 @@ function DownloadsScreen() {
           </p>
         </div>
         <Link
-          to="/app"
+          to="/"
           className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[8px] uppercase tracking-widest text-muted-foreground active:text-signal"
         >
           ◉
@@ -150,6 +151,7 @@ function DownloadsScreen() {
           own icon, full screen, and every tool included.
         </p>
         <InstallApp />
+        <div className="mt-2"><FreeInstallCount /></div>
         <Link
           to="/app"
           className="mt-2 inline-block text-[7.5px] uppercase tracking-widest text-scan underline-offset-2 hover:underline"

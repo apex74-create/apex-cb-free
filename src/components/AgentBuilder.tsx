@@ -36,7 +36,7 @@ export default function AgentBuilder({
   const { iface } = usePhoneLanIp(20000);
   const [slot, setSlot] = useState(endpoints[0]?.id ?? "phone");
   const [host, setHost] = useState("");
-  const [port, setPort] = useState(3001);
+  const [port, setPort] = useState(AGENT_PORT);
   const [path, setPath] = useState("/adb");
   const [token, setToken] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function AgentBuilder({
     setStatus("handshaking…");
     setOk(null);
     try {
-      const found = await probeWithRetry(url, { timeoutMs: 3000, retries: 2, backoffMs: 600 });
+      const found = await probeWithRetry(url, { timeoutMs: 3000, retries: 2, backoffMs: 600, token: token.trim() });
       setOk(found.ok);
       setStatus(
         found.ok
@@ -203,7 +203,8 @@ export default function AgentBuilder({
         <input
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder="token (optional)"
+          placeholder="agent token"
+          type="password"
           spellCheck={false}
           autoCapitalize="none"
           aria-label="Agent token"

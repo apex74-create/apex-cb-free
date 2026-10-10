@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import AppTopBar from "@/components/AppTopBar";
 import { useCallback, useEffect, useState } from "react";
 import {
   buildFieldReport,
@@ -102,17 +103,7 @@ function ArrayPage() {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-6">
-      <header className="flex items-center justify-between gap-3">
-        <Link to="/forecast" className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          ‹ Forecast
-        </Link>
-        <h1 className="text-[11px] font-bold uppercase tracking-[0.25em] text-signal">
-          Field Sensor Array
-        </h1>
-        <Link to="/" className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Home
-        </Link>
-      </header>
+      <AppTopBar title="Field Sensor Array" backTo="/forecast" storageKey="array" />
 
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
         Every running copy of the app is a station. It reports the air it can measure and the radio

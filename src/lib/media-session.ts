@@ -24,6 +24,34 @@ export function mediaSessionSupported(): boolean {
   return typeof navigator !== "undefined" && "mediaSession" in navigator;
 }
 
+let wavUrl: string | null = null;
+
+/** One reusable 2-second silent WAV (8 kHz, 8-bit mono, ~16 KB). */
+function silentWavUrl(): string {
+  if (wavUrl) return wavUrl;
+  const rate = 8000;
+  const n = rate * 2;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF");
+  v.setUint32(4, 36 + n, true);
+  str(8, "WAVE");
+  str(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate, true);
+  v.setUint16(32, 1, true);
+  v.setUint16(34, 8, true);
+  str(36, "data");
+  v.setUint32(40, n, true);
+  new Uint8Array(buf, 44).fill(128); // 8-bit PCM silence is mid-scale
+  wavUrl = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  return wavUrl;
+}
+
 /** Silent 1-second loop — enough for Android to treat us as a live player. */
 function silentLoop(context: AudioContext) {
   const buf = context.createBuffer(1, context.sampleRate, context.sampleRate);
@@ -45,13 +73,13 @@ export async function startKeepAlive(h: Handlers): Promise<boolean> {
     if (!src) src = silentLoop(ctx);
 
     // An <audio> element is what surfaces the notification card on Android.
+    // It must be a real, non-empty clip: a zero-length looping file makes
+    // Chrome restart it in a tight loop, which pinned the CPU on Chromebooks.
     if (!el) {
       el = document.createElement("audio");
       el.loop = true;
       el.volume = 0.0001;
-      // 1-frame silent wav, inline so nothing has to be fetched.
-      el.src =
-        "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=";
+      el.src = silentWavUrl();
       el.setAttribute("aria-hidden", "true");
       document.body.appendChild(el);
     }

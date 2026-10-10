@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { PRICE_IDS } from "@/lib/catalog";
-import { SUBSCRIPTIONS, PERPETUAL, ENTERPRISE, DATA_PRODUCTS } from "@/lib/pricing";
+import { SUBSCRIPTIONS, PERPETUAL, ENTERPRISE, DATA_PRODUCTS, CB_LADDER } from "@/lib/pricing";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   type StripeEnv,
@@ -12,7 +12,7 @@ import {
 function allowedSlugsFor(priceId: string): Set<string> {
   const out = new Set<string>();
   for (const [slug, pid] of Object.entries(PRICE_IDS)) if (pid === priceId) out.add(slug);
-  for (const t of [...SUBSCRIPTIONS, ...PERPETUAL, ...ENTERPRISE, ...DATA_PRODUCTS]) {
+  for (const t of [...SUBSCRIPTIONS, ...PERPETUAL, ...ENTERPRISE, ...DATA_PRODUCTS, ...CB_LADDER]) {
     if (t.priceId === priceId) out.add(t.licenceSlug);
   }
   return out;
@@ -99,11 +99,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       const session = await stripe.checkout.sessions.create({
         line_items: [{ price: stripePrice.id, quantity: 1 }],
-        mode: "payment",
+        mode: stripePrice.type === "recurring" ? "subscription" : "payment",
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         ...(customerId && { customer: customerId }),
-        payment_intent_data: { description: product.name },
         managed_payments: { enabled: true },
         metadata: {
           productSlug: boundSlug,
@@ -111,9 +110,39 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           managed_payments: "true",
           userId,
         },
+        ...(stripePrice.type === "recurring" && {
+          subscription_data: { metadata: { userId, productSlug: boundSlug } },
+        }),
+        ...(stripePrice.type !== "recurring" && {
+          payment_intent_data: { description: product.name },
+        }),
       } as any);
 
       return { clientSecret: session.client_secret ?? "" };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+/** Secure billing page: update card, see receipts, cancel. */
+export const createPortalSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { returnUrl: string; environment: StripeEnv }) => data)
+  .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
+    try {
+      if (!/^[a-zA-Z0-9_-]+$/.test(context.userId)) throw new Error("Invalid user");
+      const stripe = createStripeClient(data.environment);
+      const found = await stripe.customers.search({
+        query: `metadata['userId']:'${context.userId}'`,
+        limit: 1,
+      });
+      const customer = found.data[0];
+      if (!customer) return { error: "No purchases on this account yet." };
+      const portal = await stripe.billingPortal.sessions.create({
+        customer: customer.id,
+        return_url: data.returnUrl,
+      });
+      return { url: portal.url };
     } catch (error) {
       return { error: getStripeErrorMessage(error) };
     }

@@ -28,11 +28,27 @@ export default function LandingFace({ onEnter }: { onEnter: (view: "reel" | "gri
         <Link to="/tool/$key" params={{ key: "tremen" }}>
           MAP
         </Link>
-        <Link to="/assembly">SETUP</Link>
         <button type="button" onClick={() => onEnter("grid")}>
           TOOLS
         </button>
+        <Link to="/wcb" aria-label="PTT intercom — wrist CB">
+          PTT
+        </Link>
       </nav>
+
+      <a
+        href="/watch.html"
+        className="watch-landing-faceswap"
+        onClick={() => {
+          try {
+            window.localStorage.setItem("apex.face", "weather");
+          } catch {
+            /* storage blocked — the swap still works for this visit */
+          }
+        }}
+      >
+        WX FACE ›
+      </a>
     </main>
   );
 }

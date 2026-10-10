@@ -6,6 +6,7 @@ import {
   OBS_BLOCKS,
   TRENDS,
   isAllowed,
+  markSaved,
   readLocal,
   recordLocal,
   toGrid,
@@ -16,7 +17,7 @@ import {
 
 const TITLE = "Ground Check — Field Observations | Apex Signal";
 const DESCRIPTION =
-  "Tap what you actually see in the field against the radio and station reports. Preset answers only, scored by the 3-6-9 engine to sharpen local forecasts.";
+  "Log frost, fog, wind and crop conditions. Your reports are stored for a documented weather study; they do not automatically change the forecast.";
 
 export const Route = createFileRoute("/observe")({
   head: () => ({
@@ -47,6 +48,8 @@ function ObservePage() {
   const [observed, setObserved] = useState<string | null>(null);
   const [trend, setTrend] = useState<Trend>("same");
   const [age, setAge] = useState<number | null>(null);
+  const [observedAt, setObservedAt] = useState("");
+  const [note, setNote] = useState("");
   const [history, setHistory] = useState<FieldObservation[]>([]);
   const [status, setStatus] = useState("");
 
@@ -57,11 +60,14 @@ function ObservePage() {
   const submit = async () => {
     if (!reported || !observed || !isAllowed(blockId, reported, observed)) return;
     const obs: FieldObservation = {
-      block: blockId, reported, observed, trend, reportAgeMin: age,
-      verdict: verdictFor(reported, observed, trend), at: Date.now(),
+      id: crypto.randomUUID(), block: blockId, reported, observed, trend, reportAgeMin: age,
+      verdict: verdictFor(reported, observed, trend), at: observedAt ? new Date(observedAt).getTime() : Date.now(),
+      ...(note.trim() ? { note: note.trim() } : {}), sync: "pending",
     };
+    if (!Number.isFinite(obs.at) || obs.at > Date.now() + 60000) { setStatus("Choose a valid observation time, not a future time."); return; }
     setHistory(recordLocal(obs));
     setReported(null); setObserved(null); setTrend("same");
+    setNote(""); setObservedAt("");
 
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { setStatus(`${VERDICT[obs.verdict]} · saved on this device (sign in to add it to the study)`); return; }
@@ -72,7 +78,9 @@ function ObservePage() {
       user_id: auth.user.id, block: obs.block, reported: obs.reported, observed: obs.observed,
       trend: obs.trend, verdict: obs.verdict, report_age_min: obs.reportAgeMin,
       lat_grid: pos ? toGrid(pos.coords.latitude) : null, lon_grid: pos ? toGrid(pos.coords.longitude) : null,
+      client_id: obs.id ?? null, observed_at: new Date(obs.at).toISOString(), note: obs.note ?? null,
     });
+    if (!error && obs.id) setHistory(markSaved(obs.id));
     setStatus(error ? `${VERDICT[obs.verdict]} · saved here, study upload failed` : `${VERDICT[obs.verdict]} · added to the study`);
   };
 
@@ -82,7 +90,7 @@ function ObservePage() {
     <main className="mx-auto max-w-xl space-y-4 p-4">
       <header>
         <h1 className="text-2xl font-bold">Ground check</h1>
-        <p className="text-sm text-muted-foreground">Report vs. what's really on the ground. Preset answers only.</p>
+        <p className="text-sm text-muted-foreground">Your eyes are the sensor. Compare the report with what you saw, day or night.</p>
       </header>
 
       <div className="flex flex-wrap gap-2" role="tablist">
@@ -109,6 +117,12 @@ function ObservePage() {
           <p className="mb-1 text-xs uppercase text-muted-foreground">A minute ago it was</p>
           <div className="flex flex-wrap gap-2">{TRENDS.map((t) => <Button key={t.id} size="sm" variant={chip(trend === t.id)} onClick={() => setTrend(t.id)}>{t.label}</Button>)}</div>
         </div>
+        <label className="block text-xs uppercase text-muted-foreground">When did you see it? (leave blank for now)
+          <input type="datetime-local" value={observedAt} max={new Date().toISOString().slice(0, 16)} onChange={(e) => setObservedAt(e.target.value)} className="mt-1 block w-full rounded border bg-background p-2 text-sm text-foreground" />
+        </label>
+        <label className="block text-xs uppercase text-muted-foreground">Field note (optional; evidence only, not model input)
+          <textarea value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="e.g. three days of rain flattened the plants" className="mt-1 block min-h-16 w-full rounded border bg-background p-2 text-sm text-foreground" />
+        </label>
         <Button className="w-full" disabled={!reported || !observed} onClick={submit}>Send ground check</Button>
         {status ? <p role="status" className="text-sm text-warn">{status}</p> : null}
       </section>
@@ -119,13 +133,14 @@ function ObservePage() {
           <ul className="space-y-1 text-sm">
             {history.slice(0, 12).map((h) => (
               <li key={h.at} className="flex justify-between gap-2 border-b py-1">
-                <span>{h.block}: report {h.reported} → saw {h.observed}</span>
+                <span>{h.block}: report {h.reported} → saw {h.observed} · {new Date(h.at).toLocaleString()} · {h.sync === "saved" ? "study saved" : "device only"}{h.note ? ` · ${h.note}` : ""}</span>
                 <span className="font-mono text-warn">|{h.verdict}⟩</span>
               </li>
             ))}
           </ul>
         )}
       </section>
+      <p className="text-xs text-muted-foreground">Study records are private to your account. A failed upload remains on this device; it is not yet in the study. Ground checks are evidence for review, not automatic algorithm training or a forecast correction.</p>
       <Link to="/forecast" className="text-sm underline">Back to forecast</Link>
     </main>
   );

@@ -5,6 +5,7 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 import { unwrapLayers } from "./src/lib/layer-shim.ts";
 
 /**
@@ -32,8 +33,6 @@ const flattenCssLayers = () => ({
   },
 });
 
-// No PWA cache worker: installability comes from public/manifest.webmanifest,
-// and public/sw.js is a kill-switch that evicts the old offline worker.
 export default defineConfig({
   // Do NOT pin a nitro preset here. The hosted deployment targets the edge
   // runtime; forcing "node-server" produced an entry the host cannot run, so
@@ -45,7 +44,49 @@ export default defineConfig({
     server: { entry: "ssr-entry" },
   },
   vite: {
-    plugins: [flattenCssLayers()],
+    plugins: [
+      flattenCssLayers(),
+      VitePWA({
+        strategies: "generateSW",
+        filename: "sw.js",
+        injectRegister: null,
+        registerType: "autoUpdate",
+        devOptions: { enabled: false },
+        manifest: false,
+        workbox: {
+          skipWaiting: true,
+          clientsClaim: true,
+          cleanupOutdatedCaches: true,
+          navigateFallback: null,
+          // Avoid preloading the entire multi-app assembly onto a small handset.
+          globPatterns: ["watch.html"],
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+          runtimeCaching: [
+            {
+              urlPattern: ({ request, url }) =>
+                request.mode === "navigate" && url.origin === self.location.origin &&
+                !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/~oauth"),
+              handler: "NetworkFirst",
+              options: { cacheName: "apex-pages-v1", networkTimeoutSeconds: 4,
+                expiration: { maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 } },
+            },
+            {
+              urlPattern: ({ request, url }) => url.origin === self.location.origin &&
+                url.pathname.startsWith("/assets/") &&
+                ["script", "style", "font", "image"].includes(request.destination),
+              handler: "CacheFirst",
+              options: { cacheName: "apex-build-assets-v1",
+                expiration: { maxEntries: 120, maxAgeSeconds: 30 * 24 * 60 * 60 } },
+            },
+            {
+              urlPattern: ({ url }) => url.hostname === "tile.openstreetmap.org",
+              handler: "CacheFirst",
+              options: { cacheName: "apex-shield-tiles-v1", expiration: { maxEntries: 800 } },
+            },
+          ],
+        },
+      }),
+    ],
     // Pre-bundle everything up front. Late discovery forces a dep re-optimize
     // mid-session, which hands the page a second React under a new ?v= hash
     // and blanks it with "Cannot read properties of null (reading 'use')".

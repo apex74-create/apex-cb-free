@@ -49,12 +49,6 @@ function LibraryPage() {
             Home
           </Link>
           <Link
-            to="/inventory"
-            className="rounded-sm border border-border px-3 py-1.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:border-scan hover:text-scan"
-          >
-            Inventory
-          </Link>
-          <Link
             to="/store"
             className="rounded-sm border border-signal/60 px-3 py-1.5 text-[10px] uppercase tracking-widest text-signal hover:bg-signal/10"
           >

@@ -1,8 +1,8 @@
 /**
  * Human observation loop — gated ground-truth taps that check the radio /
  * station reports against what a grower actually sees. Only the preset
- * answers below are accepted (no free text), so the 3-6-9 engine is never
- * prompted with arbitrary weather input.
+ * weather comparisons use presets. Human notes are stored as evidence only;
+ * never pass notes into the 3-6-9 engine.
  *
  *   6 = ground confirms the report   3 = ground contradicts it
  *   9 = changing / unsure — hold tension, watch the next frames
@@ -13,7 +13,7 @@ import type { TriState } from "@/lib/engines/tristar-thought";
 export type Trend = "same" | "building" | "easing" | "just_changed";
 
 export type ObsBlock = {
-  id: "wind" | "rain" | "sky" | "temp" | "frost" | "dew" | "storm" | "smoke";
+  id: "wind" | "rain" | "sky" | "temp" | "frost" | "fog" | "plant" | "dew" | "storm" | "smoke";
   label: string;
   question: string;
   choices: string[];
@@ -25,6 +25,8 @@ export const OBS_BLOCKS: ObsBlock[] = [
   { id: "sky", label: "Sky", question: "The report says sky cover — what do you see overhead?", choices: ["Clear", "Partly cloudy", "Overcast", "Fog"] },
   { id: "temp", label: "Temp", question: "Compared to the reported temperature, it feels…", choices: ["Colder", "About right", "Warmer"] },
   { id: "frost", label: "Frost", question: "Any frost on leaves or low spots?", choices: ["None", "Low spots only", "On the canopy", "Hard freeze"] },
+  { id: "fog", label: "Fog", question: "What is the visibility at this time of day?", choices: ["Clear", "Patchy fog", "Dense fog", "Lifting fog"] },
+  { id: "plant", label: "Plant impact", question: "What do you see in the crop after the weather?", choices: ["No damage", "Bent / battered", "Waterlogged", "Frost damage", "Coming out / harvest"] },
   { id: "dew", label: "Dew / wet leaf", question: "How wet are the leaves right now?", choices: ["Dry", "Damp", "Soaked"] },
   { id: "storm", label: "Storm", question: "Any storm signs?", choices: ["None", "Thunder heard", "Lightning seen", "Hail"] },
   { id: "smoke", label: "Smoke / haze", question: "Smoke or haze in the air?", choices: ["None", "Light haze", "Heavy smoke"] },
@@ -38,6 +40,7 @@ export const TRENDS: { id: Trend; label: string }[] = [
 ];
 
 export type FieldObservation = {
+  id?: string;
   block: ObsBlock["id"];
   reported: string;
   observed: string;
@@ -45,6 +48,8 @@ export type FieldObservation = {
   reportAgeMin: number | null;
   verdict: TriState;
   at: number;
+  note?: string;
+  sync?: "pending" | "saved";
 };
 
 /** Gate: only preset blocks and choices pass. */
@@ -71,6 +76,12 @@ export function recordLocal(obs: FieldObservation): FieldObservation[] {
   const list = [obs, ...readLocal()].slice(0, 100);
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); } catch { /* storage full */ }
   anchor(`ground:${obs.block}`, { state: obs.verdict, ...obs });
+  return list;
+}
+
+export function markSaved(id: string): FieldObservation[] {
+  const list = readLocal().map((entry) => entry.id === id ? { ...entry, sync: "saved" as const } : entry);
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); } catch { /* local history remains best effort */ }
   return list;
 }
 

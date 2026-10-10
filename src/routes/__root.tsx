@@ -1,4 +1,10 @@
 import { isCbPath } from "@/lib/cb-routes";
+import { manifestFor, type HostInfo } from "@/lib/host";
+import { resolveHost } from "@/lib/host.functions";
+import { useOperatorAccess } from "@/lib/use-operator-access";
+import { CB, MESH, WEATHER, SHARED } from "@/lib/app-routes";
+import ApexBezel from "@/components/ApexBezel";
+import { AppFrame } from "@/components/AppFrame";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -10,7 +16,7 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { watchFaceMetrics } from "../lib/face-metrics";
@@ -20,7 +26,6 @@ import OfflineBoot from "../components/OfflineBoot";
 import PerfOverlay from "../components/PerfOverlay";
 import ShellDock from "../components/ShellDock";
 import AccountNav from "../components/AccountNav";
-import PaymentTestModeBanner from "../components/PaymentTestModeBanner";
 import BackButton from "../components/BackButton";
 import ScreenAwake from "../components/ScreenAwake";
 
@@ -49,18 +54,33 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
+  const [offline, setOffline] = useState(
+    () => typeof navigator !== "undefined" && !navigator.onLine,
+  );
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+  useEffect(() => {
+    const up = () => setOffline(false);
+    const down = () => setOffline(true);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {offline ? "You're offline" : "This page didn't load"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {offline
+            ? "That page isn't saved on this device yet. Reconnect once and open it, and it'll work offline from then on. The CB deck keeps working without internet."
+            : "Something went wrong on our end. You can try refreshing or head back home."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -85,7 +105,19 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: ({ matches }) => ({
+  // Domain is fixed for the life of the page; resolved once, never refetched.
+  loader: () => resolveHost(),
+  staleTime: Infinity,
+  head: ({ matches, loaderData }) => headFor(matches, (loaderData as HostInfo | undefined)?.app ?? null),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
+
+function headFor(matches: { routeId: unknown }[], app: HostInfo["app"]) {
+  const cbPage = app === "cb" || matches.some((m) => isCbPath(m.routeId as string));
+  return ({
     meta: [
       { charSet: "utf-8" },
       {
@@ -117,16 +149,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Wave-collapse weather prediction PWA with 62-day forecasts, map-based location picks, lovely forecast posts, and offline forecast caching.",
       },
-      {
-        property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/dee6fa1d-e2dd-4770-8b8b-78b966d856f3",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/dee6fa1d-e2dd-4770-8b8b-78b966d856f3",
-      },
     ],
     links: [
       {
@@ -134,29 +156,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" as const },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap",
       },
-      // The CB is its own install: the server hands /cb its own manifest in
-      // the first HTML, so Android offers "Sovereign CB" instead of TinyRadr.
-      {
-        rel: "manifest",
-        href: matches.some((m) => isCbPath(m.routeId as string)) ? "/cb.webmanifest" : "/manifest.webmanifest",
-      },
-      { rel: "apple-touch-icon", sizes: "180x180", href: matches.some((m) => isCbPath(m.routeId as string)) ? "/icons/cb-192.png" : "/apple-touch-icon.png" },
-      { rel: "icon", type: "image/png", sizes: "192x192", href: matches.some((m) => isCbPath(m.routeId as string)) ? "/icons/cb-192.png" : "/icons/icon-192.png" },
-      { rel: "icon", type: "image/png", sizes: "512x512", href: matches.some((m) => isCbPath(m.routeId as string)) ? "/icons/cb-512.png" : "/icons/icon-512.png" },
+      // Each domain installs its own app: encryptedcb.com -> Sovereign CB,
+      // castnetmesh.com -> Cast Net Mesh, tinyradr.com -> Enphase weather.
+      { rel: "manifest", href: manifestFor(app, cbPage) },
+       { rel: "apple-touch-icon", sizes: "180x180", href: app === "shield" ? "/icons/shield-192.png" : app === "mesh" ? "/icons/mesh-192.png" : cbPage ? "/icons/cb-192.png" : "/apple-touch-icon.png" },
+       { rel: "icon", type: "image/png", sizes: "192x192", href: app === "shield" ? "/icons/shield-192.png" : app === "mesh" ? "/icons/mesh-192.png" : cbPage ? "/icons/cb-192.png" : "/icons/icon-192.png" },
+       { rel: "icon", type: "image/png", sizes: "512x512", href: app === "shield" ? "/icons/shield-512.png" : app === "mesh" ? "/icons/mesh-512.png" : cbPage ? "/icons/cb-512.png" : "/icons/icon-512.png" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
-  }),
+  });
+}
 
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
 
 /**
  * Minimal terminal look baked into the document itself, so a device whose
@@ -164,7 +179,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
  * console instead of white unstyled HTML.
  */
 const BASE_CSS = `html,body{margin:0;height:100%;background:#010804;color:#00ff3b;font-family:"Share Tech Mono","Courier New",ui-monospace,monospace;letter-spacing:.04em;-webkit-text-size-adjust:100%}
-a,button{color:inherit;font:inherit}
+@layer base{a,button{color:inherit;font:inherit}}
 canvas{display:block}`;
 
 const WATCH_BOOT = `(function(){try{if(location.pathname!=='/'){return}var u=navigator.userAgent||'';var a=/Android\\s+(\\d+)/i.exec(u);var v=a?parseInt(a[1],10):99;var w=screen.width||0,h=screen.height||0,l=Math.max(w,h),s=Math.min(w,h);if(/Android|Mobile/i.test(u)&&v<=10&&l<=720&&s>0){location.replace('/watch.html')}}catch(e){}})();`;
@@ -196,6 +211,11 @@ function RootComponent() {
   const location = useLocation();
   const path = location.pathname;
   const landing = path === "/";
+  // Signal Network Operator package unlocks the bridge dot + operator tools.
+  // Public app screens (CB, Mesh, Weather, shared) never dial the bridge or
+  // show the dot without it.
+  const operator = useOperatorAccess();
+  const publicApp = isPublicAppPath(path);
   // Storefront surfaces share one sign-in bar; the field tools keep their dock.
   const storefront =
     landing ||
@@ -213,27 +233,61 @@ function RootComponent() {
       {landing ? (
         <>
           <OfflineBoot />
-          <PaymentTestModeBanner />
           <AccountNav />
           <Outlet />
+          <ApexBezel />
         </>
       ) : (
-        <BridgeProvider>
+        <BridgeProvider enabled={operator}>
           <OfflineBoot />
           <PerfOverlay />
           {storefront ? (
             <>
-              <PaymentTestModeBanner />
               <AccountNav />
             </>
           ) : null}
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
+           {frameSkin(path) === "weather" ? <AppFrame skin="weather" /> : frameSkin(path) === "mesh" ? <AppFrame skin="mesh" /> : frameSkin(path) === "watch" ? <AppFrame skin="watch" /> : frameSkin(path) === "uap" ? <AppFrame skin="uap" /> : frameSkin(path) === "ghost" ? <AppFrame skin="ghost" /> : frameSkin(path) === "mystic" ? <AppFrame skin="mystic" /> : frameSkin(path) === "shield" ? <AppFrame skin="shield" /> : null}
+          {apexFramed(path) ? <ApexBezel skin={frameSkin(path) ?? undefined} /> : null}
           {/* Every page but home gets a way out. */}
           <BackButton />
-          <ShellDock />
+          {operator ? <ShellDock /> : null}
         </BridgeProvider>
       )}
     </QueryClientProvider>
   );
+}
+
+const PUBLIC_PREFIXES = [
+  ...Object.values(CB).filter((p) => p !== CB.face),
+  ...Object.values(MESH).filter((p) => p !== MESH.bridge),
+  ...Object.values(WEATHER),
+  ...Object.values(SHARED).filter((p) => p !== "/"),
+  "/weather",
+  "/store/",
+  "/checkout",
+  "/library",
+];
+
+function isPublicAppPath(path: string) {
+  return PUBLIC_PREFIXES.some((p) => path === p || (p.endsWith("/") ? path.startsWith(p) : path.startsWith(p + "/")));
+}
+
+/** Watch, Weather and Mesh screens wear the CB chassis frame; CB pages
+ *  already carry their own bezel, operator tools stay plain. */
+const APEX_FRAMED = [...Object.values(WEATHER), ...Object.values(MESH), "/weather", "/app", "/face", "/uap", "/ghost", "/mystic-nine", "/shield"];
+function apexFramed(path: string) {
+  return APEX_FRAMED.some((p) => path === p || path.startsWith(p + "/"));
+}
+
+function frameSkin(path: string): "weather" | "mesh" | "watch" | "uap" | "ghost" | "mystic" | "shield" | null {
+  if (path === "/shield") return "shield";
+  if (path === "/mystic-nine") return "mystic";
+  if (path === "/uap") return "uap";
+  if (path === "/ghost") return "ghost";
+  if (Object.values(WEATHER).some((p) => path === p)) return "weather";
+  if (path === "/app" || path === "/wcb" || path === "/face") return "watch";
+  if (Object.values(MESH).filter((p) => p !== MESH.bridge && p !== MESH.splash).some((p) => path === p || path.startsWith(p + "/"))) return "mesh";
+  return null;
 }

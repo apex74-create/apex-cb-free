@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useActiveLinks } from "@/lib/cb-links";
 import { CARRIER_LABEL, pickCarrier, useOnline } from "@/lib/cb-carrier";
@@ -14,9 +14,19 @@ import { getMeshStatus, meshLive, subscribeMesh, type MeshStatus } from "@/lib/m
 export function CbCarrierBanner() {
   const online = useOnline();
   const { state } = useBridge();
+  const router = useRouter();
   const [mesh, setMesh] = useState<MeshStatus>(() => getMeshStatus());
 
   useEffect(() => subscribeMesh(setMesh), []);
+
+  // Warm the offline fallback pages while we still have internet, so the
+  // banner links below keep working after the network drops (their code
+  // chunks get cached by the service worker on first fetch).
+  useEffect(() => {
+    if (!online) return;
+    void router.preloadRoute({ to: "/bridge" }).catch(() => {});
+    void router.preloadRoute({ to: "/netchat" }).catch(() => {});
+  }, [online, router]);
 
   const links = useActiveLinks();
   const carrier = pickCarrier(online, {
@@ -31,7 +41,7 @@ export function CbCarrierBanner() {
   const tone = carrier.active === "relay" ? "text-signal" : "text-warn";
 
   return (
-    <div className="z-10 shrink-0 border-b border-border face-pad py-1">
+    <div className="cb-carrier-banner z-10 shrink-0 border-b border-border face-pad py-1">
       <span className={`block truncate text-[18px] uppercase tracking-widest ${tone}`}>
         carrier: {CARRIER_LABEL[carrier.active]} · {carrier.reason}
       </span>

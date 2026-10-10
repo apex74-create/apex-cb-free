@@ -1,12 +1,6 @@
-/**
- * Service-worker registration.
- *
- * The worker at /sw.js caches the watch-critical shell (boot page, app shell,
- * hashed build assets) so a cold boot on flaky 4G paints instantly. It is
- * network-first for navigations, so a stale cache can never claim the device
- * is offline while it is online.
- */
+/** Single registration point for the generated, published-only offline worker. */
 const SW_URL = "/sw.js";
+let started = false;
 
 export async function registerServiceWorker() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
@@ -35,28 +29,40 @@ export async function registerServiceWorker() {
     // Non-secure origins cannot host a worker; fail quietly.
     return null;
   }
+  if (started) return navigator.serviceWorker.getRegistration("/");
+  started = true;
   try {
     const reg = await navigator.serviceWorker.register(SW_URL, { scope: "/", updateViaCache: "none" });
-    // Always check for a newer worker on launch so an old cache can't pin the app.
-    void reg.update().catch(() => undefined);
-    // Take a waiting update straight away — watch sessions are short.
-    if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
-    reg.addEventListener("updatefound", () => {
-      const next = reg.installing;
-      if (!next) return;
-      next.addEventListener("statechange", () => {
-        if (next.state === "installed" && navigator.serviceWorker.controller) {
-          next.postMessage({ type: "SKIP_WAITING" });
-        }
-      });
+    const check = () => {
+      if (navigator.onLine) void reg.update().catch(() => undefined);
+    };
+    check();
+    window.addEventListener("online", check);
+    window.addEventListener("pageshow", check);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") check();
+    });
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshed = false;
+    let pendingRefresh = false;
+    document.addEventListener("visibilitychange", () => {
+      if (pendingRefresh && document.visibilityState === "visible") window.location.reload();
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !refreshed && navigator.onLine) {
+        refreshed = true;
+        if (document.visibilityState === "visible") window.location.reload();
+        else pendingRefresh = true;
+      }
     });
     return reg;
   } catch {
+    started = false;
     return null;
   }
 }
 
-/** Drop this worker and caches owned by this app. */
+/** Remove app-shell workers in preview without deleting regional map tiles. */
 export async function cleanupServiceWorkers() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
   try {
@@ -70,7 +76,7 @@ export async function cleanupServiceWorkers() {
       const names = await caches.keys();
       await Promise.allSettled(
         names
-          .filter((n) => n.startsWith("apex-") || n.startsWith("tinyradr-wave-"))
+          .filter((n) => n.startsWith("apex-pages-") || n.startsWith("apex-build-assets-") || n.startsWith("workbox-precache-") || n.startsWith("tinyradr-wave-"))
           .map((n) => caches.delete(n)),
       );
     }

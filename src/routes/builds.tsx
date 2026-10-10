@@ -120,9 +120,6 @@ function BuildsScreen() {
         iPhone builds need a Mac with Xcode and an Apple Developer account. Cable (USB) radios work
         on Android and desktop only; iPhone uses Bluetooth.
       </p>
-      <Link to="/play-readiness" className="mt-3 inline-block text-xs text-scan hover:underline">
-        Play readiness checklist
-      </Link>
     </main>
   );
 }

@@ -1,33 +1,29 @@
 import { useState } from "react";
 
-const STEPS: { title: string; tag: string; lines: string[] }[] = [
+const STEPS: { title: string; lines: string[] }[] = [
   {
-    tag: "recommended",
-    title: "Host the dash locally",
+    title: "Start the licensed agent in Termux",
     lines: [
-      "cd wifi-bridge",
-      "npm install && npm start",
-      "open apex-dash/index.html (file://) or serve on http://localhost:3000",
-      "local http pages are exempt from mixed-content blocking",
+      "Install Termux from its official release. Open the private operator bundle in Termux; keep termux-setup.sh beside adb-bridge-agent.mjs.",
+      "Run: bash termux-setup.sh",
+      "Check: curl http://127.0.0.1:8787/health — adb_present should be true. This checks the agent, not the browser link.",
+      "Keep your token from ~/apex-agent/token private. Termux:Boot is optional; the installer only writes its hook.",
     ],
   },
   {
-    tag: "quickest",
-    title: "Allow insecure content for this site",
+    title: "Choose a reachable connection",
     lines: [
-      "tap the padlock in the address bar",
-      "site settings → insecure content",
-      "switch block (default) → allow",
-      "reload — https page may now dial ws://",
+      "The published HTTPS app needs a trusted wss:// address. A plain Termux ws:// address cannot connect to it, even when /health succeeds.",
+      "Use a TLS certificate trusted by your phone/browser on the agent, or a trusted encrypted tunnel with access controls. Never expose the agent without its token.",
+      "For local HTTP development only, ws://<phone LAN IP>:8787/adb works when both devices can reach each other.",
     ],
   },
   {
-    tag: "production",
-    title: "ngrok secure tunnel",
+    title: "Finish in Bridge settings",
     lines: [
-      "ngrok http 8787",
-      "copy the wss://<id>.ngrok.app URL",
-      "paste it into the relay endpoint above",
+      "Enter the agent host, port 8787, /adb and the saved token; tap Test handshake, then Commit + dial.",
+      "A successful handshake only confirms the agent. Pair Android Wireless debugging once, then enter its CONNECT address (not the pairing port).",
+      "The status must read online with an authorized ADB device before PCAP controls work. Bruce/PCAPdroid are separate installations.",
     ],
   },
 ];
@@ -43,7 +39,7 @@ export default function MixedContentHelp() {
         onClick={() => setOpen((v) => !v)}
         className="w-full rounded-sm border border-warn py-1 text-[8px] uppercase tracking-widest text-warn"
       >
-        {open ? "hide" : "mixed content blocked? bypass protocols"}
+        {open ? "Hide setup steps" : "Set up the bridge agent"}
       </button>
       {open ? (
         <ul className="mt-1 space-y-1.5">
@@ -51,9 +47,6 @@ export default function MixedContentHelp() {
             <li key={step.title} className="rounded-sm border border-border p-1.5">
               <p className="text-[8px] font-bold uppercase tracking-widest text-signal">
                 {i + 1}. {step.title}
-              </p>
-              <p className="text-[7px] uppercase tracking-widest text-muted-foreground">
-                {step.tag}
               </p>
               <ul className="mt-1 space-y-0.5">
                 {step.lines.map((line) => (

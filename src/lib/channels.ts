@@ -43,6 +43,8 @@ const KEY_ACTIVE = "apex.netchat.channel.active";
 export const CB_MIN = 1;
 /** Free public plan — the classic 40. */
 export const CB_MAX = 40;
+/** Highest digital bus a licence can reach (commercial plan). Above 40 is digital-only. */
+export const CB_BUS_MAX = 270;
 
 /**
  * Channel licensing plans. Channels are bus names, so the cap is a licence
@@ -50,8 +52,10 @@ export const CB_MAX = 40;
  * foreman / in-field crews and field sensor access points.
  */
 export const CHANNEL_PLANS = {
-  free: { channels: 40, subChannels: false },
-  commercial: { channels: 80, subChannels: true },
+  free: { channels: 20, subChannels: false },
+  pair: { channels: 80, subChannels: false },
+  squad: { channels: 160, subChannels: true },
+  commercial: { channels: 270, subChannels: true },
 } as const;
 export type ChannelPlan = keyof typeof CHANNEL_PLANS;
 export const channelCap = (plan: ChannelPlan) => CHANNEL_PLANS[plan].channels;
