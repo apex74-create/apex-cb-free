@@ -1,0 +1,3 @@
+/** Customer-facing scope for the optional local operator bridge. */
+export const OPERATOR_BRIDGE_COPY =
+  "Local bridge: with a separate phone/PC helper, an authorized operator can connect supported Android devices for approved radio, signal and device readouts. Same-phone access can run without internet after setup; other-device access needs a compatible secure link. Requires device authorization and an operator licence for restricted tools. Not internet sharing or a substitute for CB/mesh transport; hardware connections are not yet field-verified.";

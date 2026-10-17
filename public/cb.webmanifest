@@ -1,0 +1,26 @@
+{
+  "id": "/cb",
+  "name": "Sovereign CB",
+  "short_name": "CB",
+  "description": "Standalone push-to-talk radio deck: channels 1-40, private rooms, field mesh, Bluetooth and USB links. Works with no internet.",
+  "categories": ["utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/cb",
+  "scope": "/cb",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/icons/cb-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/cb-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/cb-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/cb-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Channel 19", "short_name": "CH 19", "url": "/cb?ch=19" },
+    { "name": "Channel 9", "short_name": "CH 9", "url": "/cb?ch=9" }
+  ]
+}
