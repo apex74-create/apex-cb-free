@@ -1,0 +1,127 @@
+name: Android APK shelf
+
+# The public download shelf for the free Sovereign CB Android app.
+# Adapted from the private repo's android-release.yml (same Capacitor 8
+# shell pattern, one public product instead of six private ones).
+#
+# - Push a version tag (v*) -> build the APK and publish a GitHub Release
+#   with the APK attached.
+# - Run it by hand (Actions tab -> "Android APK shelf" -> Run workflow):
+#   builds the APK as a run artifact; tick "publish_release" to also
+#   publish a GitHub Release.
+#
+# The APK is a debug build: it installs and runs, and it is signed with
+# the standard Android debug key, not a store key. It loads Encrypted CB
+# from encryptedcb.com, so it needs an internet connection.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Also publish a GitHub Release with the APK attached"
+        required: false
+        default: false
+        type: boolean
+      version_name:
+        description: "Version name for the release (tag becomes v<version_name>)"
+        required: false
+        default: "1.0.0"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        # package-lock.json is stale against package.json (npm ci fails on
+        # this repo), so install instead of ci until the lock is refreshed.
+        run: npm install --legacy-peer-deps
+
+      - name: Work out the version label
+        env:
+          INPUT_VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=$INPUT_VERSION_NAME" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sync Android project
+        run: npx cap sync android
+
+      - name: Build Sovereign CB debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Name the APK with its version
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+            "sovereign-cb-${VERSION}.apk"
+          ls -l "sovereign-cb-${VERSION}.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: sovereign-cb-apk
+          path: sovereign-cb-*.apk
+          if-no-files-found: error
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release) }}
+    needs: android
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the built APK
+        uses: actions/download-artifact@v5
+        with:
+          name: sovereign-cb-apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION_NAME: ${{ inputs.version_name }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+            VERSION="${TAG#v}"
+          else
+            VERSION="$INPUT_VERSION_NAME"
+            TAG="v$VERSION"
+          fi
+          APK=$(ls sovereign-cb-*.apk)
+          NOTES="Free Sovereign CB Android app, version $VERSION.
+
+          Download the .apk file below to an Android phone and open it to install. Your phone may ask you to allow installs from your browser or files app — that is normal for apps installed outside the Play Store.
+
+          The app is a small shell that opens Encrypted CB (encryptedcb.com/cb), so it needs an internet connection to work. This is a debug-signed build: it installs and runs like the finished app, but it is not the Play Store edition."
+          gh release create "$TAG" "$APK" \
+            --title "Sovereign CB $TAG" \
+            --notes "$NOTES"

@@ -2,6 +2,18 @@
 
 One shared field frame, three addresses: [TinyRadr](https://tinyradr.com) is the depot and Enphase weather entrance, [Encrypted CB](https://encryptedcb.com) is the urban Sovereign CB entrance, and [Cast Net Mesh](https://castnetmesh.com) is the event-mesh entrance. Their `www` addresses serve the same respective identities. The free CB and basic field tools run in a browser/PWA; paid features require server-issued access. This is not a claim that browser-only hardware links or background audio work on every device.
 
+## Download the free Android app
+
+The free Sovereign CB app for Android lives on this repo's
+[Releases page](https://github.com/apex74-create/apex-cb-free/releases).
+Open that page, tap the newest version, and download the `.apk` file to
+your phone. Open the file to install — your phone may ask you to allow
+installs from your browser or files app; that is normal for apps
+installed outside the Play Store.
+
+The app is a small shell that opens Encrypted CB, so it needs an
+internet connection. No account is needed for the free CB channels.
+
 ## Three $9.99 toy editions
 
 The depot links to [UAP Field Station](https://tinyradr.com/uap), [Halloween Ghost Station](https://tinyradr.com/ghost), and [Mystic 9 Ball](https://tinyradr.com/mystic-nine). Each is offered at $9.99 once in the sandbox catalogue with its own purchase check. Basic radar, map, weather and CB tools remain free. Camera, microphone and motion readings depend on device permission and availability. A rotating time-series is not a 3D room scan; neither station detects paranormal or extraterrestrial causes. The nine ball is a symbolic clock-phase game, not a prediction. End-to-end checkout and licence delivery are still to be verified before claiming a completed sale; production payments require go-live.
