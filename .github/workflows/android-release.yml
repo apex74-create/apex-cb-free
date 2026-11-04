@@ -9,8 +9,6 @@ name: Android APK shelf
 # - Run it by hand (Actions tab -> "Android APK shelf" -> Run workflow):
 #   builds the APK as a run artifact; tick "publish_release" to also
 #   publish a GitHub Release.
-# - Push to branch mav/public-apk-shelf -> proof build only (temporary
-#   trigger, removed before merge).
 #
 # The APK is a debug build: it installs and runs, and it is signed with
 # the standard Android debug key, not a store key. It loads Encrypted CB
@@ -20,8 +18,6 @@ on:
   push:
     tags:
       - "v*"
-    branches:
-      - "mav/public-apk-shelf"
   workflow_dispatch:
     inputs:
       publish_release:
