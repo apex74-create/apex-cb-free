@@ -9,6 +9,11 @@
  * Android is kept out of the way: no long-press share sheet, no text
  * selection, no context menu, no drag. Pointer capture means sliding a
  * thumb off the paddle still releases cleanly instead of sticking on air.
+ * A hold of any length on this paddle is just a hold — context menu,
+ * selection start and lost-capture are all swallowed below, so nothing
+ * the browser or Android offers can interrupt a transmission (Nov 7,
+ * 2026: the web half of the PTT chooser fix; the native half lives in
+ * MainActivity, which consumes the hardware key at dispatch level).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bindPttKey } from "@/lib/ptt-key";
@@ -131,7 +136,9 @@ export function PttPaddle({
         onPointerDown={pointerDown}
         onPointerUp={pointerUp}
         onPointerCancel={() => { down.current = false; if (keyed && !latched) { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); } }}
+        onLostPointerCapture={() => { if (down.current) { down.current = false; if (keyed && !latched) { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); } } }}
         onContextMenu={(e) => e.preventDefault()}
+        onSelectStart={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
         style={{ touchAction: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
         aria-pressed={keyed}
