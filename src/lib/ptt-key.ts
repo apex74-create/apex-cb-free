@@ -66,6 +66,9 @@ export function isPttKey(
   e: Pick<KeyboardEvent, "code" | "keyCode">,
   learned: LearnedKey | null,
 ): boolean {
+  // F24 is what the native shell forwards for the side key; always honour it,
+  // even when a learned key exists (the two stores are separate).
+  if (e.code === "F24") return true;
   if (learned) return e.code === learned.code || (!!e.keyCode && e.keyCode === learned.keyCode);
   return (
     (DEFAULT_PTT_CODES as readonly string[]).includes(e.code) ||
