@@ -40,7 +40,7 @@ import {
   type MicPerm,
   type PttTx,
 } from "@/lib/ptt";
-import { learnPttKey, loadLearnedKey, saveLearnedKey } from "@/lib/ptt-key";
+import { learnPttKey, learnPttKeyNative, loadLearnedKey, loadBindings, saveBinding, saveLearnedKey, type PttBindings, type PttGesture } from "@/lib/ptt-key";
 import { setKeepAliveInfo, startKeepAlive, stopKeepAlive } from "@/lib/media-session";
 import {
   deriveRoomKey,
@@ -582,11 +582,30 @@ function CbDeck() {
   const learn = async () => {
     setLearning(true);
     setNote("press your handset side button now");
+    // In the app the container captures the key natively — it sees keys the
+    // vendor layer never delivers to the page. On the web, learn in-page.
+    const nativeCode = await learnPttKeyNative().catch(() => null);
+    if (nativeCode !== null) {
+      setLearning(false);
+      setHardKey(`key ${nativeCode}`);
+      setNote(`side key learned: ${nativeCode}`);
+      return;
+    }
     const { done } = learnPttKey();
     const k = await done;
     setLearning(false);
     setHardKey(k?.code ?? null);
     setNote(k ? `side key learned: ${k.code}` : "no key captured — try again");
+  };
+
+  /* Gesture bindings for the side key: each gesture separately assignable,
+     stored persistently, and once set they are established — the container
+     (or the in-page engine on the web) enforces them and no selector is
+     ever consulted for that gesture again. */
+  const [bindings, setBindingsState] = useState<PttBindings>(() => loadBindings());
+  const setBinding = (g: PttGesture, action: string) => {
+    saveBinding(g, action);
+    setBindingsState(loadBindings());
   };
 
   return (
@@ -941,6 +960,24 @@ function CbDeck() {
             forget side key
           </button>
         ) : null}
+        {/* side-key gestures — single / double / long, each its own binding */}
+        <div className="mb-1 flex gap-1">
+          {(["single", "double", "long"] as PttGesture[]).map((g) => (
+            <label key={g} className="flex-1 rounded-sm border border-border px-1.5 py-1 text-center text-[16px] uppercase tracking-widest text-muted-foreground">
+              {g}
+              <select
+                value={bindings[g]}
+                onChange={(e) => setBinding(g, e.target.value)}
+                className="mt-0.5 w-full bg-transparent text-center uppercase text-signal"
+                aria-label={`${g} press action`}
+              >
+                <option value="talk">talk</option>
+                <option value="open">open talk</option>
+                <option value="none">nothing</option>
+              </select>
+            </label>
+          ))}
+        </div>
 
         <div className="mb-1 flex gap-1">
           <input

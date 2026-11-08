@@ -22,7 +22,43 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- PTT target registration (Nov 7, 2026): declare the verified
+                 PTT-button actions so this app is a legitimate, bindable
+                 target for a rugged handset's hardware PTT key — the same
+                 registration Zello-class apps carry (com.zello.ptt.* is
+                 Zello's published hardware contract). If the vendor layer
+                 resolves the PTT function through activity intents, CB is
+                 now resolvable instead of funneling to an install prompt.
+                 Live key handling is native (MainActivity + PttKeyReceiver);
+                 this filter is the registration, not the mechanism. -->
+            <intent-filter>
+                <action android:name="com.zello.ptt.down" />
+                <action android:name="com.zello.ptt.up" />
+                <action android:name="android.intent.action.PTT.down" />
+                <action android:name="android.intent.action.PTT.up" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
         </activity>
+
+        <!-- PTT broadcasts, best effort at manifest level (see
+             PttKeyReceiver): the load-bearing registration is the runtime
+             receiver in MainActivity; this one catches senders that target
+             this package directly, as a bound vendor layer does. -->
+        <receiver
+            android:name=".PttKeyReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.zello.ptt.down" />
+                <action android:name="com.zello.ptt.up" />
+                <action android:name="com.zello.intent.buttonExtra1.down" />
+                <action android:name="com.zello.intent.buttonExtra1.up" />
+                <action android:name="android.intent.action.PTT.down" />
+                <action android:name="android.intent.action.PTT.up" />
+                <action android:name="com.sonim.intent.action.PTT_KEY_DOWN" />
+                <action android:name="com.sonim.intent.action.PTT_KEY_UP" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -38,4 +74,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The shell's WebView can only grant the page a microphone when the
+         app itself holds RECORD_AUDIO (the tinyradr shell already declares
+         it; this free shell was missing it, so a keyed mic in the APK had
+         nothing to open). Companion to the PTT fix, flagged in the PR. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 </manifest>
