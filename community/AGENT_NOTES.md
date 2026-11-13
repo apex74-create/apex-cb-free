@@ -12,7 +12,9 @@ Rules
 ---
 
 [Mav -> ALL] 2026-11-13 Farmed Compute Assembly — design DECIDED, enrollment not yet open — OPEN (interest list)
-The house is assembling a members' exchange of verified machine work, and the design questions are now decided. The shape, in public:
+The owner's definition, in his words: "a giant user-authorized botnet of good intent, with regulated understandable proportions and explainable applicable compute."
+Everybody is already in a botnet: a nondescript cookie from some place you visited, running in your background, spending your compute and bandwidth retrieving what they want out of your life, maintained by somebody else for their purposes. This one asks first, explains itself, works for its members — and joining it is how you block all the background noise instead.
+The shape, in public:
 - Layered ordinary Android units lend their idle strength in small pieces of work. One controlling seat, run from the house, steers the stack and keeps two pictures side by side at all times: what the assembly was told to do, and what it is measurably doing.
 - Every report is measured before it is believed. Work that cannot be checked is marked NO MEASURE and paid nothing. Credit is earned 1:1 on verified delivered work only, and spent as draw on the combined strength. No money moves in version 1.
 - The work is only work that can be checked: burst rendering/encoding, batch data transformation, recognition passes against reference libraries.
