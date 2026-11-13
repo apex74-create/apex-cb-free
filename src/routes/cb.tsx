@@ -32,7 +32,6 @@ import {
   loadCallsign,
   loadFavorites,
   micPermission,
-  openMic,
   requestMic,
   saveCallsign,
   toggleFavorite,
@@ -40,6 +39,7 @@ import {
   type MicPerm,
   type PttTx,
 } from "@/lib/ptt";
+import { createPttSession, type PttSession } from "@/lib/ptt-session";
 import { learnPttKey, learnPttKeyNative, loadLearnedKey, loadBindings, saveBinding, saveLearnedKey, type PttBindings, type PttGesture } from "@/lib/ptt-key";
 import { setKeepAliveInfo, startKeepAlive, stopKeepAlive } from "@/lib/media-session";
 import {
@@ -199,6 +199,8 @@ function CbDeck() {
   const scanRef = useRef<(() => void) | null>(null);
   const scanHitRef = useRef<PttTx | null>(null);
   const fxRef = useRef(fx);
+  const callRef = useRef(call);
+  const hapticsRef = useRef(haptics);
   const [invitePeers, setInvitePeers] = useState<InvitePeer[]>([]);
   const [incoming, setIncoming] = useState<IncomingInvite | null>(null);
   const [inviteMessage, setInviteMessage] = useState("");
@@ -250,9 +252,47 @@ function CbDeck() {
     const h = (historyDocked || mapDocked) && peekRef.current ? peekRef.current.offsetHeight : 0;
     shelf.style.setProperty("--cb-peek-h", `${h}px`);
   }, [historyDocked, mapDocked, log.length]);
-  const micRef = useRef<Awaited<ReturnType<typeof openMic>> | null>(null);
-  const cutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* ---- PTT session: one press, one session, one socket cycle ----
+   * The session machine (lib/ptt-session.ts) owns everything a press
+   * creates: the mic pipeline, the grace window that forgives a
+   * thumb-slip, the 8-second cap, and the teardown. Entrance tone,
+   * exit tone and the TX light are slaved to its transitions, so the
+   * operator's ears, the red light and the actual transmission can
+   * never disagree about where the cycle stands. */
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionRef = useRef<PttSession | null>(null);
+  if (!sessionRef.current) {
+    sessionRef.current = createPttSession({
+      events: {
+        onEnter: () => {
+          setKeyed(true);
+          setLeft(MAX_KEY_MS / 1000);
+          if (fxRef.current) chirp();
+          if (hapticsRef.current) tapHaptic(22);
+          if (tickRef.current) clearInterval(tickRef.current);
+          tickRef.current = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
+        },
+        onExit: () => {
+          setKeyed(false);
+          setLeft(MAX_KEY_MS / 1000);
+          if (tickRef.current) clearInterval(tickRef.current);
+          tickRef.current = null;
+        },
+        onSend: (body) => {
+          txRef.current?.({ kind: "voice", from: callRef.current, body });
+          if (fxRef.current) tailStatic();
+          if (hapticsRef.current) tapHaptic(16);
+          setNote("");
+        },
+        onEmpty: () => setNote("nothing captured — hold longer, keep it under 8s"),
+        onError: () => {
+          setPerm("denied");
+          setNote("mic denied — allow the microphone in site settings; text still transmits");
+        },
+      },
+    });
+  }
+  useEffect(() => () => sessionRef.current?.dispose(), []);
 
   useEffect(() => {
     let mounted = true;
@@ -327,6 +367,8 @@ function CbDeck() {
   useEffect(() => () => { scanRef.current?.(); }, []);
 
   useEffect(() => { fxRef.current = fx; }, [fx]);
+  useEffect(() => { callRef.current = call; }, [call]);
+  useEffect(() => { hapticsRef.current = haptics; }, [haptics]);
 
   useEffect(() => {
     if (!scanning) return;
@@ -509,43 +551,24 @@ function CbDeck() {
     setRoom(String(w));
   };
 
-  const release = useCallback(async () => {
-    if (cutRef.current) clearTimeout(cutRef.current);
-    if (tickRef.current) clearInterval(tickRef.current);
-    setKeyed(false);
-    setLeft(MAX_KEY_MS / 1000);
-    const mic = micRef.current;
-    if (!mic) return;
-    const url = await mic.stop();
-    mic.close();
-    micRef.current = null;
-    if (!url) return setNote("nothing captured — hold longer, keep it under 8s");
-    txRef.current?.({ kind: "voice", from: call, body: url });
-    if (fx) tailStatic();
-    if (haptics) tapHaptic(16);
-    setNote("");
-  }, [call, fx, haptics]);
+  /* A release edge is not an ending: the session machine's grace
+   * window (TX_GRACE_MS) decides whether that was a thumb-slip on the
+   * same transmission or a send. Nothing is transmitted from here. */
+  const release = useCallback(() => {
+    sessionRef.current?.release();
+  }, []);
+
+  /* A deliberate ending — tap-mode's second tap: close the session
+   * now, skipping the grace window entirely. */
+  const finish = useCallback(() => {
+    sessionRef.current?.finish();
+  }, []);
 
   const press = useCallback(async () => {
     if (!voice) return false;
     setNote("");
-    try {
-      const mic = await openMic();
-      micRef.current = mic;
-      mic.start();
-      if (fx) chirp();
-      if (haptics) tapHaptic(22);
-      setKeyed(true);
-      setLeft(MAX_KEY_MS / 1000);
-      tickRef.current = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
-      cutRef.current = setTimeout(() => void release(), MAX_KEY_MS);
-      return true;
-    } catch {
-      setPerm("denied");
-      setNote("mic denied — allow the microphone in site settings; text still transmits");
-      return false;
-    }
-  }, [voice, release, fx, haptics]);
+    return sessionRef.current?.press() ?? false;
+  }, [voice]);
 
   const grant = async () => {
     setNote("");
@@ -784,6 +807,7 @@ function CbDeck() {
         <PttPaddle
           onOpen={press}
           onSend={release}
+          onFinish={finish}
           keyed={keyed}
           disabled={scanning || !voice || perm === "denied"}
           disabledLabel={scanning ? "stop scan to talk" : perm === "denied" ? "mic blocked" : "mic unavailable"}

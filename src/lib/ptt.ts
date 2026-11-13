@@ -254,6 +254,10 @@ export async function openMic(): Promise<{
   start: () => void;
   stop: () => Promise<string | null>;
   close: () => void;
+  /** Freeze the take mid-session (a thumb-slip — see ptt-session.ts). */
+  pause: () => void;
+  /** Continue the SAME take after a slip; never a new recording. */
+  resume: () => void;
 }> {
   const raw = await navigator.mediaDevices.getUserMedia({ audio: true });
   // TX level: route the mic through a gain stage before encoding.
@@ -305,6 +309,24 @@ export async function openMic(): Promise<{
         };
         r.stop();
       }),
+    pause: () => {
+      if (rec && rec.state === "recording") {
+        try {
+          rec.pause();
+        } catch {
+          /* pause unsupported: the take simply runs through the slip */
+        }
+      }
+    },
+    resume: () => {
+      if (rec && rec.state === "paused") {
+        try {
+          rec.resume();
+        } catch {
+          /* already running */
+        }
+      }
+    },
     close: () => {
       raw.getTracks().forEach((t) => t.stop());
       void ctx?.close();

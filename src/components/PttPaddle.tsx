@@ -14,21 +14,28 @@
  * the browser or Android offers can interrupt a transmission (Nov 7,
  * 2026: the web half of the PTT chooser fix; the native half lives in
  * MainActivity, which consumes the hardware key at dispatch level).
+ *
+ * The paddle forwards raw press/release edges and nothing more. All
+ * release timing — the grace window that forgives a thumb-slip and
+ * decides what counts as a send — lives in the PTT session machine
+ * (lib/ptt-session.ts), the single owner of the session. A second,
+ * private grace here is how the states used to fork (Nov 12, 2026).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bindPttKey } from "@/lib/ptt-key";
 
 /** Under this, a press counts as a tap and latches the mic open. */
 const TAP_MS = 250;
-const RELEASE_GRACE_MS = 280;
 
 export type PaddleState = "idle" | "keyed" | "blocked";
 
 type Props = {
-  /** open the mic; resolves false when it could not be opened */
+  /** press edge: open the session; resolves false when it could not open */
   onOpen: () => Promise<boolean> | boolean;
-  /** close the mic and transmit */
+  /** release edge: hands the release to the session's grace window */
   onSend: () => void | Promise<void>;
+  /** deliberate ending (tap-mode second tap): close the session now */
+  onFinish?: () => void | Promise<void>;
   keyed: boolean;
   disabled?: boolean;
   disabledLabel?: string;
@@ -39,6 +46,7 @@ type Props = {
 export function PttPaddle({
   onOpen,
   onSend,
+  onFinish,
   keyed,
   disabled = false,
   disabledLabel = "mic unavailable",
@@ -49,16 +57,7 @@ export function PttPaddle({
   const downAt = useRef(0);
   const busy = useRef(false);
   const opening = useRef<Promise<boolean> | null>(null);
-  const releaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const down = useRef(false);
-  const resumed = useRef(false);
-
-  const cancelRelease = () => {
-    if (releaseTimer.current) clearTimeout(releaseTimer.current);
-    releaseTimer.current = null;
-  };
-
-  useEffect(() => () => cancelRelease(), []);
 
   const open = useCallback(async () => {
     if (opening.current) return opening.current;
@@ -72,23 +71,30 @@ export function PttPaddle({
     return pending;
   }, [disabled, onOpen]);
 
+  /* Release edge: the session machine's grace window takes it from
+   * here — a re-press inside the window resumes the same session. */
   const send = useCallback(async () => {
-    cancelRelease();
     if (opening.current) await opening.current;
     setLatched(false);
     await onSend();
   }, [onSend]);
+
+  /* Deliberate ending: tap-mode's second tap closes the session now. */
+  const finishSend = useCallback(async () => {
+    if (opening.current) await opening.current;
+    setLatched(false);
+    await (onFinish ? onFinish() : onSend());
+  }, [onFinish, onSend]);
 
   /* hardware side key — always hold-to-talk */
   useEffect(() => {
     if (disabled) return;
     return bindPttKey(
       () => {
-        cancelRelease();
         setHint("side key");
         void open();
       },
-      () => { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); },
+      () => { void send(); },
     );
   }, [disabled, open, send]);
 
@@ -96,8 +102,6 @@ export function PttPaddle({
     e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
     down.current = true;
-    resumed.current = !!releaseTimer.current;
-    if (releaseTimer.current) { cancelRelease(); downAt.current = Date.now(); return; }
     downAt.current = Date.now();
     if (latched) return; // second tap: handled on release
     void open();
@@ -108,15 +112,13 @@ export function PttPaddle({
     if (!down.current) return;
     down.current = false;
     const held = Date.now() - downAt.current;
-    if (latched) return void send(); // second tap sends
-    if (held < TAP_MS && !resumed.current) {
+    if (latched) return void finishSend(); // second tap sends, now
+    if (held < TAP_MS) {
       // If permission takes longer than the tap, wait until recording is live.
       void open().then((ok) => { if (ok) { setLatched(true); setHint("mic open — tap again to send"); } });
       return;
     }
-    resumed.current = false;
-    cancelRelease();
-    releaseTimer.current = setTimeout(() => { if (!down.current) void send(); }, RELEASE_GRACE_MS);
+    void send();
   };
 
   const label = disabled
@@ -135,8 +137,8 @@ export function PttPaddle({
         draggable={false}
         onPointerDown={pointerDown}
         onPointerUp={pointerUp}
-        onPointerCancel={() => { down.current = false; if (keyed && !latched) { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); } }}
-        onLostPointerCapture={() => { if (down.current) { down.current = false; if (keyed && !latched) { cancelRelease(); releaseTimer.current = setTimeout(() => void send(), RELEASE_GRACE_MS); } } }}
+        onPointerCancel={() => { down.current = false; if (keyed && !latched) void send(); }}
+        onLostPointerCapture={() => { if (down.current) { down.current = false; if (keyed && !latched) void send(); } }}
         onContextMenu={(e) => e.preventDefault()}
         onSelectStart={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
