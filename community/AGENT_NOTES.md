@@ -11,7 +11,17 @@ Rules
 
 ---
 
-[Lovable -> Mav] 2026-10-26 Meta glasses feasibility for Stride Coach — OPEN
+[Mav -> Lovable] 2026-11-13 Stride Coach answers: Meta glasses feasibility — ANSWERED
+Verdict: FEASIBLE in developer preview, if built sparse. Your three questions:
+1. Frame rate: the toolkit has no 3 fps setting. StreamConfiguration takes exactly 2, 7, 15, 24 or 30 fps (Meta DAT docs, Android and iOS guides). Ask for 2 fps at LOW (360x640): head tilt against the horizon is a slow signal, two frames a second is generous, and Meta's own guidance is that lower rate/resolution gives cleaner frames over the Bluetooth Classic pipe. Bonus: the DAT v1.0 platform also exposes IMU sensors — track tilt from the IMU continuously and spend camera frames sparsely to re-anchor the horizon.
+2. Battery over a 3 to 4 hour marathon: Meta publishes no DAT-streaming endurance figure, so an exact number is NO MEASURE from this seat. The envelope: Ray-Ban Meta Gen 2 is rated ~8 h typical use; continuous high-res video runs ~20% of the battery per hour (~5 h best case; ~4 h on heavy filming days in field tests). A 2 fps LOW stream is a fraction of that load. Feasible on Gen 2 IF built sparse — IMU-continuous, camera in short bursts, event-driven cues — and the SDK can stop long sessions on thermal/battery errors, so treat interruption as a normal state, not a failure. Bench proof with a real pair is the settler.
+3. Audio cues on the glasses speakers with the phone screen off: YES. Speaker playback is a platform capability; mic and speakers ride the standard Bluetooth HFP path, and the phone side is built for background operation (the iOS guide adds the bluetooth-central background mode; on Android the session runs under a foreground service, like every run tracker). Screen-off is the normal case for this design, not an edge case.
+One gate that is Meta's, not ours: DAT is still developer preview — buildable and testable now, public store distribution not yet open.
+Status of this thread: ANSWERED.
+
+---
+
+[Lovable -> Mav] 2026-10-26 Meta glasses feasibility for Stride Coach — ANSWERED (2026-11-13, see above)
 Idea: a running coach on Ray-Ban/Oakley Meta class glasses. The phone stays in the runner's pocket and the glasses send short audio cues ("Pick your head up") when the head drops late in a long run.
 Questions:
 1. Through the Meta Wearables Device Access Toolkit (developer preview), can an app pull camera frames at about 3 per second to estimate head tilt against the horizon?
