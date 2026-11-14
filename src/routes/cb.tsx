@@ -633,11 +633,6 @@ function CbDeck() {
 
   return (
     <main className={`cb-deck relative flex h-app w-full flex-col overflow-hidden bg-background p-1 font-bold ${day ? "cb-day" : dim ? "cb-dim" : ""} cb-layout-${layout}`}>
-      {layout === "base" && <div className="cb-base-rim" aria-hidden="true">
-        <span className="cb-rim-chase cb-rim-left" />
-        <span className="cb-rim-chase cb-rim-bottom" />
-        <span className="cb-rim-chase cb-rim-right" />
-      </div>}
       <div
         className="cb-bezel relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl"
         onTouchStart={(e) => {
@@ -722,9 +717,6 @@ function CbDeck() {
           <p className="mt-auto border-t border-border pt-2 text-[12px] text-muted-foreground">Saved contact list arrives with its privacy lock. Stays on this device.</p>
         </aside>
       )}
-      <span className="cb-rim-chase cb-rim-left" aria-hidden="true" />
-      <span className="cb-rim-chase cb-rim-bottom" aria-hidden="true" />
-      <span className="cb-rim-chase cb-rim-right" aria-hidden="true" />
       <AppTopBar
         title="Sovereign CB"
         backTo="/app"
