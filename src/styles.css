@@ -728,6 +728,11 @@ a.rounded-md[class*="border"] {
 .cb-dim .cb-map-satellite { filter: brightness(0.22) contrast(1.1); }
 .cb-dim .cb-map-host .leaflet-interactive { opacity: 0.62; }
 .cb-map-host .leaflet-control-container { display: none; }
+/* UNSTACKED 2026-11-14 — owner's order, from the watch: the diagonal
+   rainbow screen flash and the rim light chases that rode OVER this
+   chassis are removed. The face now stacks plates-and-saucers: content
+   plates in order, the plain bezel frame around them, and no light
+   layer over the top — nothing up there to blank or eat the face. */
 .cb-bezel {
   position: relative;
   border: 3px solid var(--warn);
@@ -765,110 +770,8 @@ a.rounded-md[class*="border"] {
   background: repeating-linear-gradient(90deg, oklch(0.34 0.02 75) 0 2px, oklch(0.14 0.01 75) 2px 4px);
   box-shadow: inset 0 -1px 2px oklch(0 0 0 / 50%);
 }
-.cb-bezel::before {
-  content: "";
-  position: absolute;
-  z-index: 31;
-  inset: 3px;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(135deg,
-    transparent 35%,
-    color-mix(in oklab, var(--rim-red) 7%, transparent) 41%,
-    color-mix(in oklab, var(--rim-orange) 13%, transparent) 45%,
-    color-mix(in oklab, var(--rim-yellow) 17%, transparent) 48%,
-    color-mix(in oklab, var(--rim-green) 16%, transparent) 51%,
-    color-mix(in oklab, var(--rim-cyan) 14%, transparent) 54%,
-    color-mix(in oklab, var(--rim-violet) 9%, transparent) 58%,
-    transparent 65%);
-  background-size: 260% 260%;
-  animation: cb-screen-flash 8s linear infinite;
-}
-.cb-bezel::after {
-  content: "";
-  position: absolute;
-  z-index: 30;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  pointer-events: none;
-  border-radius: 2px;
-  opacity: 0;
-  background: linear-gradient(90deg, transparent 0%, var(--rim-red) 43%, var(--rim-yellow) 48%, var(--rim-green) 51%, var(--rim-cyan) 54%, var(--rim-violet) 57%, transparent 100%);
-  background-size: 35% 100%;
-  background-repeat: no-repeat;
-  animation: cb-rim-top 8s linear infinite;
-}
-.cb-rim-chase {
-  position: absolute;
-  z-index: 30;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(90deg, transparent, var(--rim-red) 40%, var(--rim-yellow) 46%, var(--rim-green) 50%, var(--rim-cyan) 54%, var(--rim-violet) 60%, transparent);
-  background-repeat: no-repeat;
-  border-radius: 2px;
-}
-.cb-rim-left, .cb-rim-right {
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-size: 100% 25%;
-  background-image: linear-gradient(180deg, transparent, var(--rim-red) 40%, var(--rim-yellow) 46%, var(--rim-green) 50%, var(--rim-cyan) 54%, var(--rim-violet) 60%, transparent);
-}
-.cb-rim-left { left: 0; animation: cb-rim-left 8s linear infinite; }
-.cb-rim-right { right: 0; animation: cb-rim-right 8s linear infinite; }
-.cb-rim-bottom {
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background-size: 35% 100%;
-  animation: cb-rim-bottom 8s linear infinite;
-}
-/* Base scrolls the radio content independently; the light must follow the
-   stationary outer chassis, not the height/scroll position of that content. */
-.cb-layout-base > .cb-bezel > .cb-rim-chase { display: none; }
-.cb-base-rim {
-  position: absolute;
-  inset: 4px;
-  z-index: 32;
-  pointer-events: none;
-  border-radius: 0.75rem;
-  overflow: hidden;
-}
-@keyframes cb-rim-top {
-  0%, 2% { opacity: 0; background-position: 150% 0; }
-  3% { opacity: .28; }
-  14% { opacity: .28; }
-  16%, 100% { opacity: 0; background-position: -50% 0; }
-}
-@keyframes cb-rim-left {
-  0%, 14% { opacity: 0; background-position: 0 -35%; }
-  16% { opacity: .28; }
-  29% { opacity: .28; }
-  31%, 100% { opacity: 0; background-position: 0 135%; }
-}
-@keyframes cb-rim-bottom {
-  0%, 51% { opacity: 0; background-position: -50% 0; }
-  53% { opacity: .28; }
-  64% { opacity: .28; }
-  66%, 100% { opacity: 0; background-position: 150% 0; }
-}
-@keyframes cb-rim-right {
-  0%, 64% { opacity: 0; background-position: 0 135%; }
-  66% { opacity: .28; }
-  79% { opacity: .28; }
-  81%, 100% { opacity: 0; background-position: 0 -35%; }
-}
-@keyframes cb-screen-flash {
-  0%, 30% { opacity: 0; background-position: 100% 100%; }
-  32% { opacity: 1; }
-  45% { opacity: 1; }
-  48%, 100% { opacity: 0; background-position: 0 0; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .cb-bezel::before, .cb-bezel::after, .cb-rim-chase, .gyro-flash { animation: none; opacity: 0; }
+  .gyro-flash { animation: none; opacity: 0; }
 }
 /* Apex frame — the CB chassis worn by Watch, Weather and Mesh screens. */
 .apex-bezel.cb-bezel {
