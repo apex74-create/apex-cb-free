@@ -29,7 +29,13 @@ const POINTS = [
   "Weather engine built in — the same sky the depot uses, right on the CB deck.",
 ];
 
-export function CbSplash({ depotHref = "/" }: { depotHref?: string } = {}) {
+const AUCTION_HOUSE_HREF =
+  "https://apex74-create.github.io/apex-auction-house/comms.html";
+
+export function CbSplash({
+  depotHref = "/",
+  auctionHref = AUCTION_HOUSE_HREF,
+}: { depotHref?: string; auctionHref?: string } = {}) {
   // Big artwork is attached only after the page is painted, never on a
   // watch-sized panel (same rule as the depot landing page).
   const [showHero, setShowHero] = useState(false);
@@ -96,6 +102,31 @@ export function CbSplash({ depotHref = "/" }: { depotHref?: string } = {}) {
             <p className="text-[11px] leading-relaxed text-muted-foreground">{line}</p>
           </div>
         ))}
+      </section>
+
+      <section className="relative mx-auto mt-4 w-full max-w-3xl rounded-sm border border-signal/40 bg-card/70 backdrop-blur-sm">
+        <div className="p-4 sm:p-6">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-scan">
+            The Apex Auction House · the comms floor
+          </p>
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-signal">
+            Own the suite
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            The comms suite sells on the house's own floor: Sovereign CB, Cryptid CB,
+            the Wrist Communicator and Companion hang as lots — $9.99 each, the whole
+            suite $29.99. Orders run by email through the house, and every lot states
+            its real state in plain words before money is discussed.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <a
+              href={auctionHref}
+              className="rounded-sm border border-signal/60 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-signal hover:bg-signal/10"
+            >
+              The comms floor
+            </a>
+          </div>
+        </div>
       </section>
     </main>
   );

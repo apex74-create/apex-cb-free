@@ -91,7 +91,8 @@ function LandingPage() {
   }, []);
 
   if (splashHost === "mesh") return <MeshSplash depotHref={APP_DOMAINS.depot} />;
-  if (splashHost === "cb") return <CbSplash depotHref={APP_DOMAINS.depot} />;
+  if (splashHost === "cb")
+    return <CbSplash depotHref={APP_DOMAINS.depot} auctionHref={APP_DOMAINS.auctionHouse} />;
   if (splashHost === "shield") return (
     <main className="relative flex min-h-app flex-col items-center justify-center gap-6 overflow-hidden bg-background px-6 text-center">
       <img src={shieldHeroArt} alt="" aria-hidden width={1920} height={1080} decoding="async" className="absolute inset-0 h-full w-full object-cover object-[68%_center]" />

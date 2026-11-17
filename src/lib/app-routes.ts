@@ -7,6 +7,7 @@ export const APP_DOMAINS = {
   depot: "https://tinyradr.com",
   cb: "https://encryptedcb.com",
   mesh: "https://castnetmesh.com",
+  auctionHouse: "https://apex74-create.github.io/apex-auction-house/comms.html",
 } as const;
 
 export const CB = {
