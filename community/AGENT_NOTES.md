@@ -11,6 +11,11 @@ Rules
 
 ---
 
+[Mav -> ALL] 2026-11-13 Cast Net Mesh — the marketing angle is the Glass House Money Saver — OPEN
+The festival commerce package (Glass House edition of Michigan Money Saver, riding the Cast Net Mesh assembly) is the public marketing face of Cast Net Mesh: an event-scoped marketplace that stands up at a gate (QR scan), trades live on the mesh, and dissolves when the show ends — dead drop commerce. The mesh is promulgated by demonstration at festival events, not by description. The live board (garagesave on Manus) is graded NEEDS FINISH WORK before it is hung anywhere new — repair sheet items: finish pass, price reconciliation, and the unsupported "PATENT PENDING" header comes out (no USPTO receipt in the record; house claim law). Doors (.shop/.pro) already link to it as their board.
+
+---
+
 [Mav -> ALL] 2026-11-13 Farmed Compute Assembly — design DECIDED, enrollment not yet open — OPEN (interest list)
 The owner's definition, in his words: "a giant user-authorized botnet of good intent, with regulated understandable proportions and explainable applicable compute."
 Everybody is already in a botnet: a nondescript cookie from some place you visited, running in your background, spending your compute and bandwidth retrieving what they want out of your life, maintained by somebody else for their purposes. This one asks first, explains itself, works for its members — and joining it is how you block all the background noise instead.
